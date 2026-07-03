@@ -1,0 +1,23 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,comparison_family,matched_fixed_t,matched_to_threshold,threshold_role
+fixed,1,fixed,,10.0,1.0,1.0,1.0,0.3767457580566406,{1: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,1,,fixed_T1
+fixed,1,fixed,,10.0,1.0,1.0,1.0,0.37674793243408206,{1: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,1,,fixed_T1
+fixed,2,fixed,,11.0,2.0,2.0,2.0,0.4935864486694336,{2: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,2,,fixed_T2
+fixed,2,fixed,,10.3,2.0,2.0,2.0,0.48771607208251955,{2: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,2,,fixed_T2
+fixed,3,fixed,,10.6,3.0,3.0,3.0,0.5822882080078124,{3: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,3,,fixed_T3
+fixed,3,fixed,,9.6,3.0,3.0,3.0,0.5874308776855469,{3: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,3,,fixed_T3
+fixed,4,fixed,,8.0,4.0,4.0,4.0,0.6979540100097656,{4: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,4,,fixed_T4
+fixed,4,fixed,,6.4,4.0,4.0,4.0,0.700011459350586,{4: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,4,,fixed_T4
+fixed,5,fixed,,6.8,5.0,5.0,5.0,0.6888435363769532,{5: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,5,,fixed_T5
+fixed,5,fixed,,6.2,5.0,5.0,5.0,0.6868157196044922,{5: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,5,,fixed_T5
+fixed,6,fixed,,6.2,6.0,6.0,6.0,0.7635041809082032,{6: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,6,,fixed_T6
+fixed,6,fixed,,4.2,6.0,6.0,6.0,0.7411632995605468,{6: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,6,,fixed_T6
+fixed,7,fixed,,5.9,7.0,7.0,7.0,0.7508843841552735,{7: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,7,,fixed_T7
+fixed,7,fixed,,4.0,7.0,7.0,7.0,0.7260517578125,{7: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,7,,fixed_T7
+fixed,8,fixed,,4.8,8.0,8.0,8.0,0.7793741149902343,{8: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_t_sweep_subset,8,,fixed_T8
+fixed,8,fixed,,2.9,8.0,8.0,8.0,0.7432822265625,{8: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_t_sweep_subset,8,,fixed_T8
+vt,8,max_softmax,0.9,3.4,6.62,6.62,8.0,0.7837442016601562,"{3: 69, 4: 186, 5: 19, 6: 116, 7: 2, 8: 608}",batched_proxy,pgd,untargeted,20,1,True,,vt_threshold_subset,6,0.9,lower_neighbor
+vt,8,max_softmax,0.9,4.9,6.69,6.69,8.0,0.7342646942138672,"{3: 74, 4: 168, 5: 19, 6: 104, 7: 3, 8: 632}",batched_proxy,autoattack,untargeted,10,1,True,standard,vt_threshold_subset,6,0.9,lower_neighbor
+vt,8,max_softmax,0.95,4.9,7.255,7.255,8.0,0.782717529296875,"{3: 13, 4: 107, 5: 16, 6: 102, 8: 762}",batched_proxy,pgd,untargeted,20,1,True,,vt_threshold_subset,7,0.95,selected
+vt,8,max_softmax,0.95,3.4,7.168,7.168,8.0,0.741268798828125,"{3: 32, 4: 120, 5: 15, 6: 73, 7: 1, 8: 759}",batched_proxy,autoattack,untargeted,10,1,True,standard,vt_threshold_subset,7,0.95,selected
+vt,8,max_softmax,0.99,4.7,7.881,7.881,8.0,0.7802215118408203,"{3: 1, 4: 9, 5: 4, 6: 32, 7: 2, 8: 952}",batched_proxy,pgd,untargeted,20,1,True,,vt_threshold_subset,7,0.99,upper_neighbor
+vt,8,max_softmax,0.99,3.0,7.84,7.84,8.0,0.7412962799072266,"{3: 2, 4: 17, 5: 3, 6: 36, 7: 1, 8: 941}",batched_proxy,autoattack,untargeted,10,1,True,standard,vt_threshold_subset,7,0.99,upper_neighbor

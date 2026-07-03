@@ -1,0 +1,219 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{siunitx}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\title{Black-Box Model Inversion in Variable-Time Spiking Neural Networks}
+\author{Working Research Proposal}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Model inversion (MI) attacks attempt to reconstruct sensitive training data from a model's outputs and therefore represent a direct privacy risk for deployed machine learning systems. While MI has been studied extensively for artificial neural networks, recent work only begins to examine it for spiking neural networks (SNNs). The recent study \textit{Do Spikes Protect Privacy?} (2025) suggests that fixed-time SNN inference can be more resistant to black-box MI than conventional ANNs, plausibly because discrete spikes and temporal dynamics make surrogate modeling and query-based optimization harder. However, that evidence is limited to fixed-time SNNs. This proposal asks whether adaptive inference changes the privacy picture. Specifically, it studies black-box model inversion under variable-time (VT) SNN inference, where computation becomes input-dependent because inference may halt early once confidence exceeds a threshold. The central hypothesis is that VT may alter privacy in two competing ways: early halting may reduce exploitable temporal information, but confidence-driven adaptivity may also leak additional structure through outputs, query efficiency, or timing-aware observations. The project will compare fixed-time and VT SNNs on MNIST and CIFAR-10 under matched backbones, matched training recipes, and black-box inversion attacks adapted from generative adversarial model inversion. The expected outcome is the first empirical characterization of whether adaptive-time inference improves, degrades, or reshapes privacy leakage in SNNs, together with an explicit efficiency--privacy trade-off analysis.
+\end{abstract}
+
+\section{Introduction and Motivation}
+Model inversion attacks reconstruct class representatives or training-like inputs from model outputs and therefore expose a different failure mode from label error or adversarial misclassification. In many practical settings, a deployed model may never reveal its parameters, gradients, or training data, yet still leak information through repeated output queries. This makes black-box MI a natural privacy threat model for machine learning services.
+
+SNNs are now being deployed and studied not only as energy-efficient alternatives to standard ANNs, but also as systems with distinctive temporal behavior. That temporal structure changes the geometry of learning and inference, and recent evidence suggests it may also change privacy. In particular, \textit{Do Spikes Protect Privacy?} (2025) reports that fixed-time SNNs can be harder to invert than comparable ANNs in black-box settings. If correct, this makes temporal computation itself a potentially privacy-relevant property.
+
+The problem is that modern SNN inference is increasingly moving beyond fixed-time execution. Variable-time inference allows the model to halt early once confidence is sufficiently high, making computation input-dependent. This improves efficiency, but it also introduces a new observable behavior: stopping depth varies by sample. That creates an unexplored question at the intersection of privacy and adaptive computation. If fixed-time SNNs enjoy some privacy benefit because temporal dynamics make inversion harder, does VT preserve that benefit, weaken it, or replace it with a different kind of leakage?
+
+This proposal studies that question directly. Rather than asking whether SNNs are private in general, it isolates one precise mechanism: adaptive halting. The core comparison is therefore not SNN versus ANN, but fixed-time SNN inference versus variable-time SNN inference under matched backbones and matched training. The aim is to determine whether VT changes inversion vulnerability, whether confidence-based stopping introduces additional leakage, and whether any efficiency gain comes with a privacy cost.
+
+\section{Research Gap}
+Existing work establishes two adjacent but still disconnected lines of evidence. First, MI attacks are well-developed for ANNs and show that black-box outputs can reveal significant information about the training distribution. Second, recent SNN privacy work suggests that fixed-time spiking inference may be more resistant to black-box inversion than ANN baselines. What remains missing is a study of adaptive-time SNN inference.
+
+This absence matters because VT changes the inference process in exactly the way a privacy attacker may exploit:
+\begin{itemize}[leftmargin=1.3em]
+\item outputs are now coupled to a confidence-triggered stopping policy,
+\item computation becomes input-dependent rather than uniform,
+\item latency or stopping depth may become an auxiliary information channel, and
+\item model outputs may reflect confidence dynamics differently under early stopping than under fixed-time accumulation.
+\end{itemize}
+
+No existing work, to our knowledge, directly studies black-box model inversion on VT SNNs, evaluates whether adaptive stopping changes leakage, or tests whether the apparent privacy benefit of SNNs survives once time-adaptive inference is introduced.
+
+\section{Research Objectives}
+\subsection{Primary Objective}
+Evaluate whether VT changes black-box model inversion vulnerability in SNNs relative to fixed-time inference under matched architectures and training conditions.
+
+\subsection{Secondary Objectives}
+\begin{itemize}[leftmargin=1.3em]
+\item Quantify leakage differences in reconstruction quality, query efficiency, and attack stability.
+\item Analyze how the VT stopping threshold affects inversion success and privacy leakage.
+\item Measure whether confidence exposure or timing-aware observation amplifies inversion performance.
+\item Characterize the trade-off between inference efficiency and privacy leakage.
+\end{itemize}
+
+\section{Research Questions}
+\begin{itemize}[leftmargin=1.3em]
+\item \textbf{RQ1:} Are VT SNNs more or less vulnerable to black-box model inversion than fixed-time SNNs?
+\item \textbf{RQ2:} Does adaptive stopping introduce additional information leakage through outputs, confidence scores, or timing-aware observation?
+\item \textbf{RQ3:} How does the stopping threshold affect inversion success, attack efficiency, and stability?
+\item \textbf{RQ4:} Is there a measurable efficiency--privacy trade-off in VT SNN inference?
+\end{itemize}
+
+\section{Problem Setting}
+We consider a black-box adversary with query access to a trained classifier. The adversary does not observe model parameters or gradients, and cannot directly inspect the training set. Depending on the experimental condition, the adversary may observe:
+\begin{itemize}[leftmargin=1.3em]
+\item predicted labels only,
+\item labels plus confidence scores or class probabilities, or
+\item labels/confidence together with timing-aware side information such as stopping depth or observable latency.
+\end{itemize}
+
+The defender deploys either:
+\begin{itemize}[leftmargin=1.3em]
+\item a \textbf{fixed-time SNN}, which always runs for a constant number of timesteps $T$, or
+\item a \textbf{VT SNN}, which stops once the maximum softmax confidence exceeds a threshold $\tau$.
+\end{itemize}
+
+The core methodological principle is to hold the backbone and training recipe fixed whenever possible, so the main variable is the inference policy rather than architecture or optimizer differences.
+
+\section{Methodology}
+\subsection{Models}
+\paragraph{Fixed-time baseline.}
+We will train standard deterministic LIF-based SNNs that always execute a fixed number of timesteps $T$. This serves as the main privacy baseline.
+
+\paragraph{Variable-time model.}
+We will implement a simple confidence-based VT policy:
+\[
+\max(\text{softmax}(f_t(x))) > \tau,
+\]
+where $f_t(x)$ denotes the model output at timestep $t$ and $\tau$ is a stopping threshold. Lower thresholds encourage earlier stopping; higher thresholds approximate fixed-time inference.
+
+\paragraph{Control principle.}
+Whenever VT and fixed-time models are compared, they will use the same architecture, neuron model, training pipeline, and dataset split. The main manipulated variable is whether inference is fixed-time or adaptive-time.
+
+\subsection{Datasets}
+\begin{itemize}[leftmargin=1.3em]
+\item \textbf{MNIST:} a small-scale sanity check for attack implementation and qualitative reconstruction inspection.
+\item \textbf{CIFAR-10:} the main benchmark for quantitative evaluation.
+\end{itemize}
+
+\subsection{Attack Model}
+The attacker is black-box and query-based. The main attack will adapt a GAMIN-style inversion framework:
+\begin{itemize}[leftmargin=1.3em]
+\item a generator $G(z)$ maps latent variables to candidate reconstructions,
+\item the attacker queries the target model using generated samples,
+\item a surrogate objective is optimized to maximize target-class evidence or confidence alignment, and
+\item query feedback drives iterative refinement of reconstructed inputs.
+\end{itemize}
+
+The proposal follows the broad setup used in recent SNN MI work, but modifies it for VT inference. In particular, the attack will be evaluated under several visibility conditions:
+\begin{itemize}[leftmargin=1.3em]
+\item \textbf{Label-only:} the adversary observes only predicted classes.
+\item \textbf{Label + confidence:} the adversary also observes confidence scores or probability vectors.
+\item \textbf{Timing-aware:} the adversary additionally observes halting depth or a latency proxy when VT is deployed.
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+\paragraph{Reconstruction quality.}
+We will report:
+\begin{itemize}[leftmargin=1.3em]
+\item SSIM and PSNR where applicable,
+\item visual inspection of reconstructed exemplars,
+\item classifier agreement or target-class success against reference classifiers.
+\end{itemize}
+
+\paragraph{Attack efficiency.}
+We will report:
+\begin{itemize}[leftmargin=1.3em]
+\item number of queries required,
+\item convergence speed,
+\item attack success as a function of query budget.
+\end{itemize}
+
+\paragraph{Stability.}
+We will report:
+\begin{itemize}[leftmargin=1.3em]
+\item variance across random seeds,
+\item failure rate or non-convergence rate,
+\item sensitivity to initialization.
+\end{itemize}
+
+\paragraph{Inference efficiency.}
+For VT models we will report average stopping depth, timestep savings, and latency proxies so privacy can be interpreted jointly with computational benefit.
+
+\section{Planned Experiments}
+\subsection{Experiment 1: Fixed-Time versus Variable-Time Inversion}
+Compare MI success between fixed-time and VT SNNs under matched backbones and training. This is the main experiment and directly answers RQ1.
+
+\subsection{Experiment 2: VT Threshold Sweep}
+Sweep the stopping threshold $\tau$ and measure:
+\begin{itemize}[leftmargin=1.3em]
+\item reconstruction quality,
+\item query efficiency,
+\item attack stability, and
+\item average stopping depth.
+\end{itemize}
+This experiment tests whether efficiency and leakage move together or oppose each other.
+
+\subsection{Experiment 3: Fixed-Time Timestep Ablation}
+Vary the fixed timestep budget (for example $T \in \{5,10,20,50\}$) to determine whether leakage trends in fixed-time SNNs depend strongly on simulation horizon. This prevents the comparison from unfairly favoring one particular fixed-time operating point.
+
+\subsection{Experiment 4: Output Visibility and Side Channels}
+Compare label-only, label-plus-confidence, and timing-aware settings. This directly tests whether VT creates a side channel through adaptive stopping behavior, and whether confidence exposure dominates or merely complements timing leakage.
+
+\subsection{Experiment 5: Efficiency--Privacy Frontier}
+For VT threshold sweeps and fixed-time ablations, plot inversion quality against inference cost. This will provide the clearest picture of whether privacy improves, degrades, or trades off against efficiency.
+
+\section{Expected Contributions}
+\begin{enumerate}[leftmargin=1.3em]
+\item The first dedicated study of black-box model inversion on VT SNNs.
+\item A controlled comparison between fixed-time and adaptive-time SNN inference under matched architectures.
+\item Empirical evidence on whether adaptive halting improves, weakens, or reshapes privacy leakage.
+\item A characterization of the efficiency--privacy trade-off induced by VT.
+\item Evidence about whether timing-aware observation constitutes a meaningful side channel in adaptive SNN inference.
+\end{enumerate}
+
+\section{Hypotheses}
+\begin{itemize}[leftmargin=1.3em]
+\item \textbf{H1:} VT SNNs may leak more than fixed-time SNNs when confidence-aligned stopping produces outputs that are easier for the attacker to exploit.
+\item \textbf{H2:} Alternatively, early stopping may reduce exploitable temporal structure and therefore reduce inversion quality for some thresholds.
+\item \textbf{H3:} Leakage will depend strongly on output visibility, with confidence access and timing-aware observation significantly improving attack success.
+\item \textbf{H4:} The privacy behavior of VT will not be monotone in threshold; rather, different thresholds will expose different efficiency--privacy operating points.
+\end{itemize}
+
+\section{Feasibility}
+This project is feasible with standard software infrastructure and does not require neuromorphic hardware. The main components are:
+\begin{itemize}[leftmargin=1.3em]
+\item \textbf{Implementation stack:} PyTorch together with an SNN framework such as SpikingJelly or Norse.
+\item \textbf{Model side:} fixed-time and VT SNN inference are both already standard to implement.
+\item \textbf{Attack side:} black-box MI frameworks are well-established and can be adapted from existing GAMIN-style pipelines.
+\item \textbf{Datasets:} MNIST and CIFAR-10 provide a realistic but manageable scope.
+\end{itemize}
+
+The main technical risk is attack instability in the pure black-box setting, especially on CIFAR-10. This can be mitigated by first validating the attack on MNIST, performing repeated runs with multiple seeds, and reporting query budgets explicitly rather than relying only on endpoint reconstructions.
+
+\section{Why This Project Matters}
+This proposal matters because it connects three trends that are usually studied separately:
+\begin{itemize}[leftmargin=1.3em]
+\item growing interest in SNN privacy,
+\item increasing use of adaptive-time inference in SNNs, and
+\item the deployment reality that black-box outputs and timing may both be observable.
+\end{itemize}
+
+If VT changes privacy leakage, then adaptive inference cannot be evaluated solely on accuracy and efficiency. Privacy may become another deployment constraint, just as robustness and latency already are. Conversely, if VT preserves or even improves privacy relative to fixed-time SNNs, that would provide an additional argument in favor of adaptive inference. Either outcome is informative.
+
+\section{Conclusion}
+This proposal studies a simple but unexplored question: does variable-time inference change the privacy properties of SNNs under black-box model inversion attacks? The project is motivated by recent evidence that fixed-time SNNs may be harder to invert than ANNs, but recognizes that adaptive halting fundamentally changes what the attacker can observe and exploit. By comparing fixed-time and VT SNNs under matched settings, threshold sweeps, timestep ablations, and output-visibility conditions, the proposed study aims to provide the first systematic evidence on whether adaptive computation in SNNs creates an efficiency--privacy trade-off. The expected result is not merely another MI benchmark, but a clearer understanding of whether temporal adaptivity itself is a privacy-relevant mechanism.
+
+\end{document}

@@ -1,0 +1,5 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,comparison_family,matched_to_threshold,matched_fixed_t,threshold_role
+fixed,8,fixed,,44.0,8.0,8.0,8.0,0.551228515625,{8: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_T8_subset,0.5,8,fixed_T8_baseline
+fixed,8,fixed,,22.2,8.0,8.0,8.0,0.5413336181640624,{8: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_T8_subset,0.5,8,fixed_T8_baseline
+vt,8,max_softmax,0.5,42.4,5.698,5.698,8.0,0.4988609619140625,"{2: 147, 3: 94, 4: 191, 5: 13, 6: 65, 7: 17, 8: 473}",batched_proxy,pgd,untargeted,20,1,False,,vt_selected_subset,0.5,4,selected
+vt,8,max_softmax,0.5,11.3,5.489,5.489,8.0,0.475044921875,"{2: 225, 3: 96, 4: 140, 5: 12, 6: 37, 7: 11, 8: 479}",batched_proxy,autoattack,untargeted,10,1,True,standard,vt_selected_subset,0.5,4,selected

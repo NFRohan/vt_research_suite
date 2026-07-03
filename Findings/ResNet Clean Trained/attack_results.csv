@@ -1,0 +1,13 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,threshold_role
+fixed,8,fixed,,0.0,8.0,8.0,8.0,0.99999658203125,{8: 10000},batched_proxy,pgd,untargeted,20,1,False,,fixed_T8_baseline
+vt,8,max_softmax,0.6,0.0,2.0026,2.0026,3.024,0.9945650299072266,"{2: 9978, 3: 19, 4: 2, 5: 1}",batched_proxy,pgd,untargeted,20,1,True,,lower_neighbor
+vt,8,max_softmax,0.7,0.02,2.0037,2.0037,3.2048,0.9951840423583984,"{2: 9972, 3: 25, 4: 1, 6: 1, 8: 1}",batched_proxy,pgd,untargeted,20,1,True,,selected
+vt,8,max_softmax,0.8,0.0,2.0083,2.0083,3.6416,0.9957957000732421,"{2: 9934, 3: 58, 4: 4, 5: 2, 7: 1, 8: 1}",batched_proxy,pgd,untargeted,20,1,True,,upper_neighbor
+vt,8,max_softmax,0.6,0.0,2.0001,2.0001,2.0512,0.9982176147460937,"{2: 9999, 3: 1}",batched_proxy,pgd,wrong_early_exit,20,1,True,,lower_neighbor
+vt,8,max_softmax,0.7,0.0,2.0012,2.0012,2.4608,0.9985542877197265,"{2: 9991, 3: 8, 6: 1}",batched_proxy,pgd,wrong_early_exit,20,1,True,,selected
+vt,8,max_softmax,0.8,0.0,2.0015,2.0015,2.512,0.9987657409667968,"{2: 9988, 3: 9, 4: 3}",batched_proxy,pgd,wrong_early_exit,20,1,True,,upper_neighbor
+vt,8,max_softmax,0.6,59.74,3.0913,3.0913,8.0,0.7853711639404297,"{2: 6133, 3: 1623, 4: 745, 5: 218, 6: 234, 7: 72, 8: 975}",batched_proxy,pgd,compute_overuse,20,1,True,,lower_neighbor
+vt,8,max_softmax,0.7,60.58,3.5793,3.5793,8.0,0.8054709014892578,"{2: 5098, 3: 1714, 4: 885, 5: 257, 6: 312, 7: 114, 8: 1620}",batched_proxy,pgd,compute_overuse,20,1,True,,selected
+vt,8,max_softmax,0.8,63.1,4.2305,4.2305,8.0,0.8126447540283203,"{2: 4054, 3: 1599, 4: 952, 5: 238, 6: 371, 7: 112, 8: 2674}",batched_proxy,pgd,compute_overuse,20,1,True,,upper_neighbor
+fixed,8,fixed,,0.06,8.0,8.0,8.0,0.9774137268066406,{8: 10000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_T8_baseline
+vt,8,max_softmax,0.7,0.02,2.1392,2.1392,8.0,0.976485238647461,"{2: 9505, 3: 227, 4: 77, 5: 28, 6: 20, 7: 11, 8: 132}",batched_proxy,autoattack,untargeted,10,1,True,standard,selected

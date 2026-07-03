@@ -1,0 +1,13 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,threshold_role
+fixed,8,fixed,,35.6,8.0,8.0,8.0,0.42517631912231446,{8: 2000},batched_proxy,pgd,untargeted,20,1,False,,fixed_T8_baseline
+vt,8,max_softmax,0.5,34.55,6.8515,6.8515,8.0,0.4127132568359375,"{2: 119, 3: 49, 4: 205, 5: 65, 6: 149, 7: 25, 8: 1388}",batched_proxy,pgd,untargeted,20,1,True,,lower_neighbor
+vt,8,max_softmax,0.6,34.75,7.4485,7.4485,8.0,0.42004478073120116,"{2: 44, 3: 15, 4: 108, 5: 40, 6: 101, 7: 10, 8: 1682}",batched_proxy,pgd,untargeted,20,1,True,,selected
+vt,8,max_softmax,0.7,35.8,7.785,7.785,8.0,0.4256607894897461,"{2: 13, 3: 1, 4: 46, 5: 15, 6: 55, 7: 8, 8: 1862}",batched_proxy,pgd,untargeted,20,1,True,,upper_neighbor
+vt,8,max_softmax,0.5,34.5,6.6935,6.6935,8.0,0.4279131736755371,"{2: 149, 3: 45, 4: 244, 5: 53, 6: 170, 7: 19, 8: 1320}",batched_proxy,pgd,wrong_early_exit,20,1,True,,lower_neighbor
+vt,8,max_softmax,0.6,33.35,7.4245,7.4245,8.0,0.44004646682739257,"{2: 40, 3: 18, 4: 116, 5: 30, 6: 123, 7: 21, 8: 1652}",batched_proxy,pgd,wrong_early_exit,20,1,True,,selected
+vt,8,max_softmax,0.7,32.9,7.781,7.781,8.0,0.4440910530090332,"{2: 10, 3: 4, 4: 39, 5: 20, 6: 68, 7: 6, 8: 1853}",batched_proxy,pgd,wrong_early_exit,20,1,True,,upper_neighbor
+vt,8,max_softmax,0.5,64.4,6.5855,6.5855,8.0,0.4393609161376953,"{2: 133, 3: 42, 4: 273, 5: 68, 6: 250, 7: 25, 8: 1209}",batched_proxy,pgd,compute_overuse,20,1,True,,lower_neighbor
+vt,8,max_softmax,0.6,67.1,7.262,7.262,8.0,0.4623740653991699,"{2: 41, 3: 19, 4: 146, 5: 40, 6: 202, 7: 27, 8: 1525}",batched_proxy,pgd,compute_overuse,20,1,True,,selected
+vt,8,max_softmax,0.7,66.7,7.6765,7.6765,8.0,0.47681096267700196,"{2: 4, 3: 2, 4: 60, 5: 31, 6: 130, 7: 20, 8: 1753}",batched_proxy,pgd,compute_overuse,20,1,True,,upper_neighbor
+fixed,8,fixed,,27.6,8.0,8.0,8.0,0.408764591217041,{8: 2000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_T8_baseline
+vt,8,max_softmax,0.6,27.55,7.3865,7.3865,8.0,0.4046899528503418,"{2: 80, 3: 29, 4: 94, 5: 27, 6: 67, 7: 11, 8: 1692}",batched_proxy,autoattack,untargeted,10,1,True,standard,selected

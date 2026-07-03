@@ -1,0 +1,4 @@
+threshold,threshold_role,distance_from_selected,selection_rank
+0.5,selected,0.0,0
+0.6,upper_neighbor,0.09999999999999998,1
+0.7,upper_neighbor,0.19999999999999996,2

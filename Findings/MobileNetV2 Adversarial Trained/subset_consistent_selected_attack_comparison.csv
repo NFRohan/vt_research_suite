@@ -1,0 +1,7 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,comparison_family,matched_fixed_t,matched_to_threshold,threshold_role
+fixed,8,fixed,,34.5,8.0,8.0,8.0,0.42455680084228514,{8: 1000},batched_proxy,pgd,untargeted,20,1,False,,fixed_T8_subset,8,0.6,fixed_T8_baseline
+fixed,8,fixed,,28.7,8.0,8.0,8.0,0.4078855056762695,{8: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,fixed_T8_subset,8,0.6,fixed_T8_baseline
+fixed,7,fixed,,34.0,7.0,7.0,7.0,0.3998242950439453,{7: 1000},batched_proxy,pgd,untargeted,20,1,False,,matched_fixed_control,7,0.6,selected
+fixed,7,fixed,,28.2,7.0,7.0,7.0,0.385412956237793,{7: 1000},batched_proxy,autoattack,untargeted,10,1,False,standard,matched_fixed_control,7,0.6,selected
+vt,8,max_softmax,0.6,33.7,7.439,7.439,8.0,0.4205716094970703,"{2: 30, 3: 4, 4: 57, 5: 11, 6: 46, 7: 8, 8: 844}",batched_proxy,pgd,untargeted,20,1,True,,vt_selected_subset,7,0.6,selected
+vt,8,max_softmax,0.6,27.1,7.352,7.352,8.0,0.4057688522338867,"{2: 43, 3: 12, 4: 51, 5: 12, 6: 41, 7: 8, 8: 833}",batched_proxy,autoattack,untargeted,10,1,True,standard,vt_selected_subset,7,0.6,selected

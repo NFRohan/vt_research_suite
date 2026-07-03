@@ -1,0 +1,3 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,avg_synops,avg_dense_ops,avg_spike_count,avg_spike_density,activation_sparsity,report_mode
+fixed,8,fixed,,80.72,8.0,8.0,8.0,0.6971127752304077,{8: 10000},batched_proxy,clean,clean,0,0,False,,3864268560.5914,18289434624.0,1756534.6488,0.14256697705857305,0.7326727691867991,fixed_full_horizon
+fixed,4,fixed,,79.95,4.0,4.0,4.0,0.679355743598938,{4: 10000},batched_proxy,clean,clean,0,0,False,,1894144807.2894,9144717312.0,859198.3782,0.13947156187016913,0.7374736976175031,fixed_compute_matched

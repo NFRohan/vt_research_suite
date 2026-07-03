@@ -1,0 +1,3 @@
+mode,time_steps,stop_rule,threshold,accuracy,avg_steps,avg_stopping_depth,avg_executed_steps,avg_confidence,step_histogram,compute_mode,attack_name,attack_objective,attack_steps,attack_eot,exit_aware_attack,autoattack_version,threshold_role
+fixed,8,fixed,,42.8,8.0,8.0,8.0,0.661744888305664,{8: 250},batched_proxy,autoattack,untargeted,0,4,False,rand,fixed_T8_baseline
+vt,8,max_softmax,0.6,45.6,4.168,4.168,4.168,0.6120668981671333,"{1: 104, 2: 23, 3: 6, 4: 9, 5: 5, 6: 5, 7: 1, 8: 97}",batched_proxy,autoattack,untargeted,0,4,True,rand,selected
