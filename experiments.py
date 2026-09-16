@@ -84,6 +84,8 @@ def _empty_result(mode: str, time_steps: int, stop_rule: StopRule | None, thresh
         "attack_objective": attack_config.objective if attack_config is not None else "clean",
         "attack_steps": attack_config.steps if attack_config is not None else 0,
         "attack_eot": attack_config.eot_iters if attack_config is not None else 0,
+        "attack_epsilon": attack_config.epsilon if attack_config is not None else 0.0,
+        "attack_alpha": attack_config.alpha if attack_config is not None else 0.0,
         "exit_aware_attack": bool(attack_config.exit_aware) if attack_config is not None else False,
         "autoattack_version": autoattack_version,
     }
@@ -220,6 +222,7 @@ def evaluate_policy(
             "avg_executed_steps": totals["executed_steps"] / count,
             "avg_confidence": totals["confidence"] / count,
             "step_histogram": dict(sorted(step_histogram.items())),
+            "n_samples": int(totals["count"]),
         }
     )
     if compute_metrics:

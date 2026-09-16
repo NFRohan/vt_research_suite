@@ -169,6 +169,19 @@ DEFAULT_DATA_ROOT = os.environ.get(
 EXPERIMENT_ROOT = DEFAULT_OUTPUT_ROOT
 EXPERIMENT_ROOT.mkdir(exist_ok=True)
 
+# ---- Training regime toggle (pure ratios, NO annealing) ----
+# Run the notebook once per regime; checkpoints/outputs are regime-tagged so they
+# never collide. Default "adversarial" reproduces the prior _adv_ checkpoint name.
+#   "clean"       -> 100% clean examples (clean_ratio 1.0)
+#   "adversarial" -> 100% adversarial    (clean_ratio 0.0)
+TRAIN_REGIME = "adversarial"   # or "clean"
+if TRAIN_REGIME == "clean":
+    REGIME_TAG, REGIME_CLEAN_RATIO = "clean", 1.0
+elif TRAIN_REGIME == "adversarial":
+    REGIME_TAG, REGIME_CLEAN_RATIO = "adv", 0.0
+else:
+    raise ValueError(f"TRAIN_REGIME must be 'clean' or 'adversarial', got {TRAIN_REGIME!r}")
+
 RUN_TRAINING = True
 RUN_ABLATION_TRAINING = False
 RUN_ARCHITECTURE_TRAINING = False
@@ -240,8 +253,8 @@ training_cfg = TrainingConfig(
     use_amp=True,
     amp_dtype="float16",
     gradient_clip=1.0,
-    clean_ratio_start=0.0,
-    clean_ratio_end=0.0,
+    clean_ratio_start=REGIME_CLEAN_RATIO,
+    clean_ratio_end=REGIME_CLEAN_RATIO,
     entropy_lambda=0.0,
     epsilon=8/255,
     alpha=8/255,
@@ -253,7 +266,7 @@ training_cfg = TrainingConfig(
     seed=0,
     device="cuda" if torch.cuda.is_available() else "cpu",
     output_dir=str(EXPERIMENT_ROOT / "checkpoints"),
-    checkpoint_name="vanilla_mobilenetv2_adv_full_model.pt",
+    checkpoint_name=f"vanilla_mobilenetv2_{REGIME_TAG}_full_model.pt",
     eval_interval=5,
     selection_metric="clean",
 )

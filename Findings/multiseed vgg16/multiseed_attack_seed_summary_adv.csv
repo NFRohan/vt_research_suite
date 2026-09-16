@@ -1,0 +1,7 @@
+variance_source,operating_point,attack,mean,std,count,report
+attack_seed,fixed_T8,autoattack,18.366666666666667,0.11547005383792526,3,18.37 +/- 0.12 (n=3)
+attack_seed,fixed_T8,pgd,45.03333333333333,1.0016652800877828,3,45.03 +/- 1.00 (n=3)
+attack_seed,fixed_matched,autoattack,20.433333333333334,0.45092497528228875,3,20.43 +/- 0.45 (n=3)
+attack_seed,fixed_matched,pgd,43.800000000000004,0.26457513110645914,3,43.80 +/- 0.26 (n=3)
+attack_seed,vt_selected,autoattack,16.033333333333335,0.8144527815247073,3,16.03 +/- 0.81 (n=3)
+attack_seed,vt_selected,pgd,45.166666666666664,0.550757054728609,3,45.17 +/- 0.55 (n=3)

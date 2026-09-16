@@ -1,0 +1,960 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{default}
+\setbeamertemplate{navigation symbols}{}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{tikz}
+
+% ---- data-series colours (defined BEFORE the theme, which references catk) ----
+\definecolor{cfixed}{RGB}{54,100,158}
+\definecolor{cvt}{RGB}{206,123,26}
+\definecolor{catk}{RGB}{178,45,45}
+\newcommand{\FIX}[1]{\textcolor{cfixed}{#1}}
+\newcommand{\VT}[1]{\textcolor{cvt}{#1}}
+\newcommand{\ATK}[1]{\textcolor{catk}{#1}}
+
+% ===================== GREEN THEME =====================
+\definecolor{thHeader}{RGB}{44,70,40}
+\definecolor{thMid}{RGB}{89,127,60}
+\definecolor{thTint}{RGB}{232,239,223}
+\definecolor{thSubtitle}{RGB}{205,222,193}
+\definecolor{thGray}{RGB}{120,120,120}
+
+\setbeamercolor{normal text}{fg=black,bg=white}
+\setbeamercolor{frametitle}{bg=thHeader,fg=white}
+\setbeamercolor{framesubtitle}{fg=thSubtitle}
+\setbeamercolor{title}{fg=thHeader}
+\setbeamercolor{subtitle}{fg=thMid}
+\setbeamercolor{author}{fg=thGray}
+\setbeamercolor{date}{fg=thGray}
+\setbeamercolor{institute}{fg=thGray}
+\setbeamercolor{section in head/foot}{fg=thGray,bg=white}
+\setbeamercolor{block title}{bg=thMid,fg=white}
+\setbeamercolor{block body}{bg=thTint,fg=black}
+\setbeamercolor{block title alerted}{bg=catk,fg=white}
+\setbeamercolor{block body alerted}{bg=catk!8,fg=black}
+\setbeamercolor{itemize item}{fg=thMid}
+\setbeamercolor{itemize subitem}{fg=thMid}
+\setbeamercolor{itemize subsubitem}{fg=thMid}
+\setbeamercolor{item projected}{bg=thMid,fg=white}
+\setbeamercolor{footline}{fg=thGray,bg=white}
+\setbeamercolor{page number in head/foot}{fg=thGray}
+\setbeamercolor{section number projected}{bg=thMid,fg=white}
+\setbeamercolor{caption}{fg=thGray}
+
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\scriptsize,series=\mdseries}
+\setbeamerfont{section in head/foot}{size=\tiny}
+\setbeamerfont{block title}{series=\bfseries}
+\setbeamerfont{footline}{size=\scriptsize}
+
+\setbeamertemplate{itemize item}{\tikz\fill[thMid] (0,0) circle (0.42ex);}
+\setbeamertemplate{itemize subitem}{\tikz\fill[thMid] (0,0) circle (0.34ex);}
+\setbeamertemplate{itemize subsubitem}{\tikz\draw[thMid,line width=0.6pt] (0,0) circle (0.34ex);}
+
+\newcommand{\thNumCircle}[1]{%
+  \tikz[baseline=-0.65ex]\node[circle,fill=thMid,text=white,inner sep=0pt,
+       minimum size=2.1ex,font=\scriptsize\bfseries]{#1};%
+}
+\setbeamertemplate{enumerate item}{\thNumCircle{\insertenumlabel}}
+\setbeamertemplate{enumerate subitem}{\thNumCircle{\insertsubenumlabel}}
+\setbeamertemplate{enumerate subsubitem}{\thNumCircle{\insertsubsubenumlabel}}
+
+\setbeamertemplate{section in toc}{%
+  \leavevmode\thNumCircle{\inserttocsectionnumber}\hskip0.6em{\color{black}\inserttocsection}\par\vskip1.1ex}
+\setbeamertemplate{subsection in toc}{%
+  \leavevmode\leftskip=3.2em\tikz\fill[thMid] (0,0) circle (0.34ex);\hskip0.6em{\color{black}\inserttocsubsection}\par\vskip0.4ex}
+
+\defbeamertemplate*{section in head/foot}{green theme}{\textcolor{thMid}{\bfseries\insertsectionhead}}
+\defbeamertemplate*{section in head/foot shaded}{green theme}{\textcolor{thGray}{\insertsectionhead}}
+\setbeamertemplate{headline}{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=3.4ex,dp=1.1ex]{section in head/foot}
+    \insertsectionnavigationhorizontal{\paperwidth}{\hskip0.4cm}{\hskip0.4cm}
+  \end{beamercolorbox}%
+  {\color{thHeader}\rule{\paperwidth}{1.1pt}}%
+}
+
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth,leftskip=0.5cm,rightskip=0.5cm,vmode]{frametitle}
+    \vspace{1.4ex}
+    \usebeamerfont{frametitle}\insertframetitle\par
+    {\usebeamerfont{framesubtitle}\usebeamercolor[fg]{framesubtitle}\insertframesubtitle\strut\par}
+    \vspace{0.9ex}
+  \end{beamercolorbox}%
+}
+
+\setbeamertemplate{footline}{%
+  {\color{thMid}\hrule width\paperwidth height0.8pt}%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=2.4ex,dp=1.1ex,leftskip=0.5cm,rightskip=0.5cm]{footline}
+    \usebeamerfont{footline}\insertshorttitle\hfill\insertframenumber\,/\,\inserttotalframenumber
+  \end{beamercolorbox}%
+}
+
+\setbeamertemplate{title page}{%
+  \vbox to \textheight{%
+    \vspace*{0.5cm}
+    {\color{thMid}\rule{\linewidth}{2.4pt}}\\[1.4cm]
+    {\usebeamercolor[fg]{title}\usebeamerfont{title}\inserttitle\par}
+    \vspace{0.5cm}
+    {\usebeamercolor[fg]{subtitle}\usebeamerfont{subtitle}\insertsubtitle\par}
+    \vfill
+    {\usebeamercolor[fg]{author}\usebeamerfont{author}\insertauthor\par}
+    \vspace{0.2cm}
+    {\usebeamercolor[fg]{date}\usebeamerfont{date}\insertdate\par}
+    \vspace{0.6cm}
+    {\color{thMid}\rule{\linewidth}{2.4pt}}
+    \vfill
+  }
+}
+\setbeamerfont{title}{size=\Large,series=\bfseries}
+\setbeamerfont{subtitle}{size=\normalsize,series=\mdseries}
+% =================== END GREEN THEME ====================
+
+\newcommand{\figorbox}[2]{%
+  \IfFileExists{#1}{\includegraphics[width=#2]{#1}}%
+  {\fbox{\parbox[c][3.0cm][c]{#2}{\centering\small\ATK{[FIGURE PLACEHOLDER]}\\\texttt{\detokenize{#1}}}}}}
+\graphicspath{{figs/}{./}}
+\sisetup{detect-all, table-number-alignment=center}
+\title[VT-SNN Defense]{Variable Timing in Spiking Neural Networks:\\ Efficiency Gains and the Attack Surface They Create}
+\subtitle{BSc Thesis Defense}
+\author{Rohan}
+\date{\today}
+\begin{document}
+\begin{frame}\titlepage\end{frame}
+\begin{frame}{Outline}\framesubtitle{Roadmap}\tableofcontents\end{frame}
+
+\section{Background}
+\begin{frame}{Motivation}\framesubtitle{Why adaptive inference in SNNs?}
+\begin{itemize}
+  \item SNNs process input over $T$ discrete timesteps; cost scales with $T$.
+  \item Most samples are easy, and are classified correctly long before $T=8$.
+  \item \VT{Variable Timing (VT)}: halt once confidence crosses a threshold $\theta$.
+  \item Promise: large compute savings, with no change to the backbone.
+\end{itemize}
+\vspace{0.4em}
+\begin{block}{The question this thesis asks}
+VT is almost always compared against \FIX{full-horizon $T=8$} inference. That is not the
+fair baseline. What happens under a \FIX{fixed-$T$ control at the same compute budget}?
+\end{block}
+\end{frame}
+
+\begin{frame}{Spiking Neural Networks}\framesubtitle{Primer}
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\begin{itemize}
+  \item Leaky integrate-and-fire neurons, direct input encoding.
+  \item Binary spikes turn multiplications into accumulations.
+  \item Cost metric: \textbf{SynOps} = dense ops $\times$ activation sparsity.
+  \item Deterministic at inference: no membrane noise.
+\end{itemize}
+\end{column}
+\begin{column}{0.40\textwidth}
+\centering\figorbox{SNN.png}{\linewidth}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{The VT Mechanism}\framesubtitle{}
+\centering\figorbox{VT.png}{0.70\linewidth}
+\end{frame}
+
+\begin{frame}{Related Work}\framesubtitle{Three threads, studied separately}
+\small
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\begin{block}{Adaptive Inference}
+BranchyNet, MSDNet, ACT; Dynamic Confidence, DT-SNN, SpikeCP, VT-SNN.
+\end{block}
+\vspace{0.4em}
+\begin{block}{SNN Efficiency}
+SynOps accounting, timestep reduction, AutoSNN.
+\end{block}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{block}{SNN Robustness}
+Inherent-robustness claims, certified training, neuromorphic temporal coding.
+\end{block}
+\vspace{0.4em}
+\begin{block}{Reliable Evaluation}
+PGD alone is insufficient; AutoAttack; adaptive attacks.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{The Gap}\framesubtitle{What prior work controls for}
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+ & Compute-matched & Adaptive & Energy as & Calib./eval \\
+ & baseline & attacks & attack surface & separation \\
+\midrule
+DT-SNN / Dynamic Confidence & \ATK{no} & \ATK{no} & \ATK{no} & \ATK{no} \\
+Neuromorphic robustness     & \ATK{no} & partial  & \ATK{no} & \ATK{no} \\
+SNN energy accounting       & \ATK{no} & \ATK{no} & \ATK{no} & n/a \\
+SpikeCP / VT-SNN            & \ATK{no} & \ATK{no} & \ATK{no} & partial \\
+\midrule
+\textbf{This thesis}        & \textbf{yes} & \textbf{yes} & \textbf{yes} & \textbf{yes} \\
+\bottomrule
+\end{tabular}
+\vspace{0.6em}
+\begin{block}{}
+\small No prior VT study compares against a \FIX{compute-matched} fixed-$T$ control.
+\end{block}
+\end{frame}
+
+\begin{frame}{Problem Statement}
+\framesubtitle{}
+\begin{itemize}
+    \item \textbf{VT is reported as a major efficiency improvement} for
+    Spiking Neural Networks (SNNs).
+    \item However, existing comparisons often use
+    \textbf{full-horizon inference} as the baseline, rather than a
+    \textbf{fixed-time model at the same compute budget}.
+    \item Therefore, it remains unclear whether VT provides a
+    \textbf{genuine efficiency advantage} or simply benefits from a
+    favorable comparison.
+    \item Moreover, VT introduces a \textbf{data-dependent halting decision},
+    creating a new control channel whose vulnerability to
+    \textbf{adversarial manipulation} has not been sufficiently studied.
+\end{itemize}
+\vspace{0.8mm}
+\begin{alertblock}{This Thesis}
+Evaluates VT from both \textbf{compute-matched efficiency} and
+\textbf{adversarial robustness} perspectives.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Contributions}
+\framesubtitle{Four Key Contributions}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\begin{block}{1. Compute-Matched Evaluation}
+\small
+A \textbf{compute-matched evaluation protocol} for VT,
+including calibration/test separation.
+\end{block}
+\vspace{8mm}
+\begin{block}{3. Selection-Bias Analysis}
+\small
+Identification of \textbf{selection bias} in the standard
+VT operating-point criterion, with a neutral replacement.
+\end{block}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{block}{2. VT Advantage}
+\small
+Evidence that the VT advantage is \textbf{real but small},
+and \textbf{contingent on backbone training}.
+\end{block}
+\vspace{4mm}
+\begin{block}{4. Compute-Overuse Attack}
+\small
+A \textbf{compute-overuse attack} demonstrating that the
+halting gate is an \textbf{energy attack surface} across
+three backbones.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Research Questions}\framesubtitle{}
+\begin{block}{RQ1 --- Efficiency}
+Does VT outperform a \FIX{compute-matched fixed-$T$} baseline on clean accuracy, and
+does that hold across architectures and training regimes?
+\end{block}
+\begin{block}{RQ2 --- Robustness}
+Does any efficiency advantage survive adversarial evaluation, and does the halting
+mechanism itself constitute an exploitable attack surface?
+\end{block}
+\end{frame}
+
+\section{Method}
+\begin{frame}{Compute-Matched Framework}\framesubtitle{The core methodological move}
+\begin{enumerate}
+  \item Sweep \FIX{fixed-$T$} for $T=1 \ldots 8$; record accuracy and SynOps.
+  \item Sweep \VT{VT} over a threshold grid; record accuracy, stopping depth, SynOps.
+  \item For each VT point, find the fixed-$T$ control with the \textbf{nearest SynOps}.
+  \item Report the difference, not VT versus $T=8$.
+\end{enumerate}
+\begin{alertblock}{Why this matters}
+Comparing VT against $T=8$ guarantees a win. Equal-compute comparison is the only test
+of the adaptive-inference hypothesis.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Operating-Point Selection}\framesubtitle{A bias we found, and fixed}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\textbf{\ATK{Biased (standard)}}\\
+\vspace{3mm}
+Pick $\theta$ maximising (VT $-$ matched fixed).
+\begin{itemize}\small
+  \item Optimises the reported quantity.
+  \item Seeks wherever the baseline is weakest.
+  \item Selected a point \textbf{31 pts below} full horizon in one configuration.
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{Neutral (ours)}\\
+\vspace{3mm}
+Lowest-SynOps $\theta$ whose calibration accuracy is within $\delta$ of full horizon.
+\begin{itemize}\small
+  \item Cannot flatter VT by construction.
+  \item Standard early-exit convention.
+  \item Stable for $\delta \in \{0.5, 1.0, 2.0\}$.
+\end{itemize}
+\end{column}
+\end{columns}
+\vspace{0.5em}
+\begin{block}{Effect on our own prior numbers}
+\small ResNet-18 clean $+4.19 \rightarrow \mathbf{+2.73}$ \qquad
+ResNet-18 adversarial $+2.13 \rightarrow \mathbf{+1.37}$
+\end{block}
+\end{frame}
+
+\begin{frame}{Threat Models}\framesubtitle{Two distinct questions}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\textbf{Label robustness}
+\vspace{3mm}\\ Does the prediction stay correct?
+\begin{itemize}\small
+  \item PGD-20 untargeted
+  \item AutoAttack (standard ensemble)
+  \item wrong-early-exit (exit-aware)
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{\ATK{Compute robustness}}
+\vspace{3mm}\\ Does inference \emph{cost} stay bounded?
+\begin{itemize}\small
+  \item compute-overuse objective
+  \item maximise executed steps
+  \item while \emph{preserving} the label
+\end{itemize}
+\end{column}
+\end{columns}
+\vspace{0.5em}
+\begin{alertblock}{}
+\small A VT system can be attacked without ever being wrong. Standard robustness
+evaluation cannot see this.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{The Compute-Overuse Attack}\framesubtitle{Attacking the halting gate}
+\begin{itemize}
+  \item Objective: hold per-step confidence \emph{below} $\theta$ so the model never halts early.
+  \item Simultaneously preserve the true label, so outputs still look correct.
+  \item $\ell_\infty$, $\varepsilon = 8/255$, PGD-20, full temporal trace exposed to the attacker.
+\end{itemize}
+\begin{block}{Consequence}
+Energy and latency become adversarially controllable while accuracy is untouched. The
+victim sees correct predictions and a larger bill.
+\end{block}
+\end{frame}
+
+\begin{frame}{Dataset and Backbones}\framesubtitle{Setup (1/3)}
+\begin{block}{Dataset}
+\textbf{CIFAR-10}, with train / val / calibration / test splits. Test used only for final reporting.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Backbones (deterministic, direct encoding, $T_{\max}=8$)}
+\begin{itemize}\small
+  \item ResNet-18, four residual stages, 11.2M parameters
+  \item VGG16, five stages $(2,2,3,3,3)$, 33.6M parameters
+  \item MobileNetV2, inverted residuals, 2.2M parameters
+\end{itemize}
+\end{block}
+\vspace{0.3em}
+\begin{alertblock}{Note}
+\small No stochastic noise, no dynamic sigma, no Parseval regularisation.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Training Setup}\framesubtitle{Setup (2/3)}
+\begin{block}{Optimization}
+\small SGD, base LR $0.1$, momentum $0.9$, weight decay $10^{-4}$, 5 warmup epochs, 100 epochs.
+Mixed precision, gradient clipping $1.0$, cosine schedule.
+\end{block}
+\vspace{0.4em}
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\begin{block}{Two Training Regimes}
+\small\textit{(pure ratios, no annealing)}
+\begin{itemize}\small
+  \item \textbf{Clean:} 100\% clean examples
+  \item \textbf{Adversarial:} 100\% RFGSM adversarial examples, $\varepsilon = 8/255$
+\end{itemize}
+\end{block}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{block}{Two Timestep Schedules}
+\begin{itemize}\small
+  \item \textbf{Fixed-$T8$:} train only at $T=8$
+  \item \textbf{Mixed-$T$:} train across $T=1 \ldots 8$
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Attack Setup}\framesubtitle{Setup (3/3)}
+\begin{block}{Attack Configuration}
+\begin{itemize}
+  \item $\ell_\infty$, $\varepsilon = 8/255$, PGD step $2/255$, 20 steps, random start.
+  \item AutoAttack: standard ensemble (APGD-CE, APGD-T, FAB-T, Square).
+  \item \textbf{Adaptive through the halting decision:} gradients propagate through the
+        full temporal trace, so the attacker sees and can steer every per-step confidence.
+  \item Class-balanced attack subsets; $n$ is reported with every number.
+\end{itemize}
+\end{block}
+\vspace{0.4em}
+\begin{alertblock}{Key Design Point}
+\small This is the key design point for RQ2. The attack is not a label attack applied
+to a VT model; it differentiates through the exit gate.
+\end{alertblock}
+\end{frame}
+
+\section{Results}
+\begin{frame}{Results}\framesubtitle{}\centering\Large Results\end{frame}
+
+\begin{frame}{RQ1: The Accuracy--Compute Frontier}\framesubtitle{Representative configuration: VGG16, clean-trained}
+\centering\figorbox{frontier_vgg_clean.png}{0.60\linewidth}
+\\\small
+\VT{VT} sits above the \FIX{fixed-$T$} curve at equal SynOps: the adaptive policy is not
+merely reproducing a static truncation depth.
+\end{frame}
+
+\begin{frame}{RQ1: Frontiers Across All Configurations}\framesubtitle{Small multiples: 3 backbones $\times$ 2 regimes}
+\centering\figorbox{frontier_small_multiples.png}{0.65\linewidth}
+\\\small
+Shared axes. The same shape recurs in all six panels, including \textbf{MobileNetV2},
+whose depthwise-separable convolutions give a different SynOps profile. The effect is
+not a dense-convolution artifact.
+\end{frame}
+
+\begin{frame}{RQ1: Selected Operating Points}\framesubtitle{Neutral criterion $\delta=1.0$; selected on calibration, reported on test}
+\centering\small
+\begin{tabular}{llS[table-format=1.2]S[table-format=1.2]S[table-format=2.2]cS[table-format=2.2]S[table-format=+1.2]}
+\toprule
+Backbone & Regime & {$\theta$} & {Depth} & {\VT{VT} acc.} & {Matched} & {\FIX{Fixed} acc.} & {$\Delta$} \\
+\midrule
+ResNet-18   & Clean & 0.90 & 3.01 & 90.62 & $T{=}3$ & 87.89 & +2.73 \\
+VGG16       & Clean & 0.80 & 3.89 & 87.75 & $T{=}4$ & 84.63 & +3.12 \\
+MobileNetV2 & Clean & 0.99 & 7.41 & 78.08 & $T{=}7$ & 74.71 & +3.37 \\
+\midrule
+ResNet-18   & Adv.  & 0.60 & 5.01 & 72.83 & $T{=}5$ & 71.46 & +1.37 \\
+VGG16       & Adv.  & 0.50 & 5.74 & 64.64 & $T{=}6$ & 63.75 & +0.89 \\
+MobileNetV2 & Adv.  & 0.60 & 7.21 & 50.92 & $T{=}7$ & 50.64 & +0.28 \\
+\bottomrule
+\end{tabular}
+\vspace{0.4em}
+\begin{block}{Reading}
+\small \textbf{Clean-trained: a consistent $\approx +3$ across all three backbones.}
+Adversarially trained: much smaller, and the lower two rows sit within the noise floor
+($\pm 0.9$ to $1.0$ at these $n$). The depth column matters: MobileNetV2 saves only
+about 7\% of steps, so its $+3.37$ is near-full-horizon inference.
+\end{block}
+\end{frame}
+
+\begin{frame}{RQ2: Under PGD, VT Looks Fine}\framesubtitle{Adversarially trained models, PGD-20}
+\centering\small
+\begin{tabular}{lS[table-format=2.2]S[table-format=2.2]S[table-format=+2.2]}
+\toprule
+Backbone & {\FIX{Fixed $T{=}8$}} & {\VT{VT selected}} & {$\Delta$} \\
+\midrule
+ResNet-18   & 46.10 & 48.70 & +2.60 \\
+VGG16       & 45.90 & 44.45 & -1.45 \\
+MobileNetV2 & 35.60 & 34.75 & -0.85 \\
+\bottomrule
+\end{tabular}
+\vspace{0.7em}
+\begin{block}{Interim conclusion, revised on the next slide}
+\small VT is competitive under PGD, and on ResNet-18 it is ahead. A study reporting only
+PGD would conclude that VT is robustness-neutral.
+\end{block}
+\end{frame}
+
+\begin{frame}{RQ2: Under AutoAttack, the Picture Changes}\framesubtitle{Same checkpoints, same $\varepsilon$, stronger attack}
+\centering\small
+\begin{tabular}{lS[table-format=2.2]S[table-format=2.2]S[table-format=+2.2]S[table-format=+2.2]}
+\toprule
+Backbone & {\FIX{Fixed $T{=}8$}} & {\VT{VT selected}} & {$\Delta$ (AA)} & {$\Delta$ (PGD)} \\
+\midrule
+ResNet-18   & 28.85 & 24.15 & -4.70 & +2.60 \\
+VGG16       & 10.75 &  8.55 & -2.20 & -1.45 \\
+MobileNetV2 & 27.60 & 27.55 & -0.05 & -0.85 \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{alertblock}{The reversal, stated precisely}
+\small On \textbf{ResNet-18} the sign flips between attacks: $+2.60$ ahead under PGD,
+\ATK{$-4.70$} behind under AutoAttack. \textbf{These are single runs, and the AutoAttack
+result does not replicate}: over three training seeds the same comparison gives
+$+2.73 \pm 2.29$ on ResNet-18 and $-2.03 \pm 4.97$ on VGG16. The apparent reversal is a
+property of one checkpoint, not of VT.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{RQ2: The Gap Across All Configurations}\framesubtitle{Adversarially trained; same checkpoints, two attacks}
+\centering\figorbox{pgd_aa_gap.png}{0.80\linewidth}
+\begin{alertblock}{}
+\small Single-run result. Across three training seeds these AutoAttack differences do not
+replicate: VT is ahead on ResNet-18 ($+2.73$) and behind on VGG16 ($-2.03$), with the
+sign set by the training seed.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{RQ2: Against the Compute-Matched Control}\framesubtitle{Sharpest form of the result: ResNet-18 adversarial, $n=1000$}
+\centering\small
+\begin{tabular}{lS[table-format=2.1]S[table-format=2.1]}
+\toprule
+Operating point & {PGD-20} & {AutoAttack} \\
+\midrule
+\FIX{Fixed $T=8$}                  & 44.1 & 22.2 \\
+\FIX{Matched fixed $T=4$}          & 40.2 & \bfseries 33.7 \\
+\VT{VT selected ($\theta{=}0.50$)} & 43.1 & \bfseries 10.5 \\
+\bottomrule
+\end{tabular}
+\vspace{0.6em}
+\begin{alertblock}{}
+\small Under PGD, VT (43.1) beats its matched control (40.2). Under AutoAttack the same
+comparison inverts by \textbf{23 points} (10.5 versus 33.7). Under strong attack the best
+fixed-time deployment is a \emph{short} horizon, not $T=8$, and not VT.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Do the Gains Survive Training Seeds?}\framesubtitle{Three independently trained seeds per backbone; paired within each checkpoint}
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{ResNet-18 adv.} & \multicolumn{2}{c}{VGG16 adv.} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Condition & Mean $\pm$ std & Verdict & Mean $\pm$ std & Verdict \\
+\midrule
+Clean       & $+2.13 \pm 0.85$ & \textbf{real}  & $+2.80 \pm 1.18$ & \textbf{real} \\
+PGD-20      & $+0.60 \pm 1.20$ & noise          & $-0.13 \pm 1.33$ & noise \\
+AutoAttack  & $+2.73 \pm 2.29$ & \ATK{marginal} & $-2.03 \pm 4.97$ & noise \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{block}{What replicates}
+\small The \textbf{clean advantage replicates on both backbones}, in both cases larger
+than twice its own standard deviation. No attacked comparison does.
+\end{block}
+\begin{alertblock}{What does not replicate: the AutoAttack result}
+\small Per-seed AutoAttack deltas are $+0.90, +5.30, +2.00$ on ResNet-18 and
+$-3.50, -6.10, +3.50$ on VGG16. \textbf{The sign depends on the training seed.} A
+single-run study of either backbone would confidently report an effect that is not there.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Compute-Overuse: Energy as an Attack Surface}\framesubtitle{Depth inflation at the selected operating point, label preserved}
+\centering\figorbox{compute_overuse.png}{0.70\linewidth}
+\begin{alertblock}{Architecture-independent}
+\small Clean-trained models inflate by $\approx +1.15$ steps in all three backbones;
+adversarially trained models by $<0.3$. Adversarial training is an unintentional defence
+against energy attacks.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{The Compute-Overuse Attack}\framesubtitle{Energy as an attack surface, all three backbones}
+\centering\small
+\begin{tabular}{llS[table-format=1.3]S[table-format=1.3]S[table-format=+1.3]S[table-format=2.2]}
+\toprule
+Backbone & Regime & {Clean depth} & {\ATK{Attacked}} & {Inflation} & {Acc.\ kept} \\
+\midrule
+ResNet-18   & Clean & 2.393 & 3.579 & +1.186 & 60.58 \\
+VGG16       & Clean & 3.533 & 4.702 & +1.169 & 72.10 \\
+MobileNetV2 & Clean & 6.556 & 7.707 & +1.151 & 97.20 \\
+\midrule
+ResNet-18   & Adv.  & 5.130 & 5.404 & +0.274 & 92.00 \\
+VGG16       & Adv.  & 6.272 & 6.311 & +0.038 & 80.95 \\
+MobileNetV2 & Adv.  & 7.208 & 7.262 & +0.054 & 67.10 \\
+\bottomrule
+\end{tabular}
+\vspace{0.4em}
+\begin{alertblock}{A consistent, architecture-independent result}
+\small Clean-trained models inflate by $\approx +1.15$ steps in \emph{all three}
+backbones, roughly $20\times$ the inflation of their adversarially trained counterparts,
+\textbf{while the label is preserved}. Adversarial training is an unintentional defence
+against energy attacks.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Training Schedule Changes Everything}\framesubtitle{Fixed-$T8$ versus mixed-$T$ training, ResNet-18}
+\centering\small
+\begin{tabular}{lS[table-format=+1.2]S[table-format=+1.2]}
+\toprule
+Regime & {Fixed-$T8$ trained} & {Mixed-$T$ trained} \\
+\midrule
+Clean       & +2.73 & +0.14 \\
+Adversarial & +1.37 & +0.68 \\
+\bottomrule
+\end{tabular}
+\vspace{0.6em}
+\begin{block}{Why}
+\small Training across $T=1 \ldots 8$ makes the \emph{short-horizon fixed-$T$ controls
+much stronger} (adversarial ResNet at $T{=}4$: $69.35 \rightarrow 76.26$; at $T{=}2$:
+$57.51 \rightarrow 70.04$). The VT advantage is measured against those controls, so it
+collapses into the noise floor.
+\end{block}
+\begin{alertblock}{}
+\small \textbf{Much of the reported VT benefit reflects baselines that were never
+trained to run at short horizons.} The field compute-matches the baseline but never
+\emph{training}-matches it.
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{Why Does VT Collapse Under AutoAttack?}\framesubtitle{Mechanism: hypothesis and evidence}
+\begin{columns}[T]
+\begin{column}{0.52\textwidth}
+\textbf{Hypothesis}
+\begin{enumerate}\small
+  \item The exit gate is a second, \emph{low-dimensional} control channel.
+  \item The attacker drives a \ATK{confident-but-wrong} early exit.
+  \item Apparent PGD robustness is \ATK{gradient masking} from temporal averaging.
+  \item The Square and FAB components of AutoAttack bypass this.
+\end{enumerate}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Supporting evidence}
+\begin{itemize}\small
+  \item Deep-halting checkpoints ($\theta{=}0.85$, depth 6.2) show \emph{no} collapse.
+  \item Shallow-halting ($\theta{=}0.50$, depth 4.3) shows the 23-point gap.
+  \item Under PGD, accuracy falls $28.6$ points while confidence falls only $11\%$:
+        the gate reads confidence, not correctness.
+\end{itemize}
+\end{column}
+\end{columns}
+\vspace{0.3em}
+\centering\figorbox{confidence_trajectory.png}{0.55\linewidth}
+\end{frame}
+
+\section{Conclusions}
+\begin{frame}{Limitations}\framesubtitle{Threats to validity}
+\scriptsize
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\begin{block}{Run-to-run variance is large}
+Re-training an identical configuration moved clean accuracy by $3.51$ points and the
+VT advantage from $+1.37$ to $+2.89$. Differences below roughly $2$ points are
+directional, not precise.
+\end{block}
+\vspace{0.25em}
+\begin{block}{Multi-seed bars cover one configuration}
+ResNet-18 and VGG16 adversarial are each replicated over three training seeds; the
+clean-trained and MobileNetV2 configurations are single-run. Attack-seed variance is measured separately (std $\le 1.33$).
+\end{block}
+\vspace{0.25em}
+\begin{block}{Scope}
+One VT policy family, one dataset (CIFAR-10).
+\end{block}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{block}{One withheld measurement}
+A full-test attack evaluation for the adversarially trained ResNet-18 could not be
+reconciled with two independent subset evaluations, and is excluded pending
+re-measurement.
+\end{block}
+\vspace{0.25em}
+\begin{block}{Mixed-$T$ evidence is ResNet-only}
+VGG16 and MobileNetV2 were not retrained under the mixed schedule.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Conclusions}\framesubtitle{What the evidence supports}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\begin{block}{A real but modest advantage}
+VT gives a \textbf{real but modest} clean-accuracy advantage over compute-matched
+fixed-$T$: a consistent $\approx +3$ points across three backbones, \textbf{clean-trained
+only}, replicated over three seeds on two backbones ($+2.13 \pm 0.85$ ResNet-18,
+$+2.80 \pm 1.18$ VGG16).
+\end{block}
+\vspace{0.3em}
+\begin{block}{It fades under harder training}
+That advantage \textbf{largely disappears} under adversarial training, and under
+mixed-$T$ training.
+\end{block}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{block}{Not a robustness improvement}
+VT is \textbf{not} a demonstrated robustness change in either direction. Across
+training seeds the attacked comparisons are indistinguishable from zero.
+\end{block}
+\vspace{0.3em}
+\begin{block}{A genuine attack surface}
+The halting gate is a \textbf{genuine attack surface}: compute can be inflated while
+accuracy is preserved, consistently across architectures.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Recommendations}\framesubtitle{For future adaptive-inference work}
+\small
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\begin{block}{Report compute-matched controls}
+\FIX{Compute-matched} fixed-$T$ controls by default, never VT versus $T=8$ alone.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Training-match the baseline}
+Not only compute-match it.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Use a VT-neutral criterion}
+Select operating points with a \textbf{VT-neutral} criterion.
+\end{block}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{block}{Do not stop at PGD}
+Never conclude robustness from PGD alone.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Separate the two robustnesses}
+Report \textbf{compute robustness} separately from label robustness.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Report seeds}
+Attacked accuracy varies far more across training seeds than clean accuracy does.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Future Work}\framesubtitle{}
+\small
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\begin{block}{Multi-seed training bars}
+Extend beyond VGG16 to the remaining headline configurations.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Mixed-$T$ for other backbones}
+Mixed-$T$ schedules for VGG16 and MobileNetV2.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Transferable compute-overuse attacks}
+Universal and transferable compute-overuse perturbations.
+\end{block}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{block}{Timing side-channel attacks}
+Black-box timing side-channel attacks on the halting decision.
+\end{block}
+\vspace{0.3em}
+\begin{block}{Defences}
+Hard compute caps, confidence smoothing, adversarial training against the compute
+objective.
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+\begin{frame}{References}
+\framesubtitle{References (1/3)}
+\small
+\setlength{\itemsep}{2pt}
+\begin{thebibliography}{99}
+\bibitem{graves2016}
+A. Graves. Adaptive computation time for recurrent neural networks.
+\emph{arXiv:1603.08983}, 2016.
+\bibitem{teerapittayanon2016}
+S. Teerapittayanon, B. McDanel, H. T. Kung.
+BranchyNet: Fast inference via early exiting from deep neural networks.
+\emph{ICPR}, 2016.
+\bibitem{huang2018}
+G. Huang et al.
+Multi-scale dense networks for resource efficient image classification.
+\emph{ICLR}, 2018.
+\bibitem{li2023dynamic}
+Y. Li et al.
+Unleashing the potential of spiking neural networks by dynamic confidence.
+\emph{ICCV}, 2023.
+\bibitem{li2023input}
+Y. Li et al.
+Input-aware dynamic timestep spiking neural networks for efficient
+in-memory computing.
+\emph{DAC}, 2023.
+\bibitem{chen2023}
+Chen et al.
+Knowing when to stop: Delay-adaptive spiking neural network classifiers
+with reliability guarantees.
+\emph{arXiv preprint}, 2023.
+\bibitem{rao2025}
+Rao et al.
+VT-SNN: Variable time-step spiking neural network.
+\emph{MICCAI}, 2025.
+\end{thebibliography}
+\end{frame}
+
+\begin{frame}{References}
+\framesubtitle{References (2/3)}
+\small
+\setlength{\itemsep}{2pt}
+\begin{thebibliography}{99}
+\bibitem{sorbaro2020}
+M. Sorbaro et al.
+Optimizing the energy consumption of spiking neural networks for
+neuromorphic applications.
+\emph{Frontiers in Neuroscience}, 14:662, 2020.
+\bibitem{fang2021}
+W. Fang et al.
+Deep residual learning in spiking neural networks.
+\emph{NeurIPS}, 2021.
+\bibitem{deng2022}
+S. Deng, Y. Li, S. Zhang, S. Gu.
+Temporal efficient training of spiking neural network via gradient
+re-weighting.
+\emph{ICLR}, 2022.
+\bibitem{na2022}
+B. Na et al.
+AutoSNN: Towards energy-efficient spiking neural networks.
+\emph{ICML}, 2022.
+\bibitem{sharmin2019}
+S. Sharmin et al.
+A comprehensive analysis on adversarial robustness of spiking neural
+networks.
+\emph{IJCNN}, 2019.
+\bibitem{sharmin2020}
+S. Sharmin et al.
+Inherent adversarial robustness of deep spiking neural networks:
+Effects of discrete input encoding and non-linear activations.
+\emph{ECCV}, 2020.
+\bibitem{liang2022}
+L. Liang et al.
+Toward robust spiking neural network against adversarial perturbation.
+\emph{arXiv:2205.01625}, 2022.
+\end{thebibliography}
+\end{frame}
+
+\begin{frame}{References}
+\framesubtitle{References (3/3)}
+\small
+\setlength{\itemsep}{2pt}
+\begin{thebibliography}{99}
+\bibitem{wang2025}
+J. Wang et al.
+Random heterogeneous spiking neural network for adversarial defense.
+\emph{iScience}, 2025.
+\bibitem{ding2025}
+Ding et al.
+Neuromorphic computing paradigms enhance robustness through spiking
+neural networks.
+\emph{Nature Communications}, 2025.
+\bibitem{madry2018}
+A. Madry et al.
+Towards deep learning models resistant to adversarial attacks.
+\emph{ICLR}, 2018.
+\bibitem{athalye2018}
+A. Athalye, N. Carlini, D. Wagner.
+Obfuscated gradients give a false sense of security:
+Circumventing defenses to adversarial examples.
+\emph{ICML}, 2018.
+\bibitem{croce2020}
+F. Croce, M. Hein.
+Reliable evaluation of adversarial robustness with an ensemble of
+diverse parameter-free attacks.
+\emph{ICML}, 2020.
+\bibitem{tramer2020}
+F. Tramer, N. Carlini, W. Brendel, A. Madry.
+On adaptive attacks to adversarial example defenses.
+\emph{NeurIPS}, 2020.
+\end{thebibliography}
+\end{frame}
+
+\appendix
+\section{Backup}
+\begin{frame}{Backup}\framesubtitle{}\centering\Large Backup Slides\end{frame}
+
+\begin{frame}{B1: Selection Criterion Sensitivity}\framesubtitle{Neutral criterion at three tolerances}
+\centering\small
+\begin{tabular}{lS[table-format=+1.2]S[table-format=+1.2]S[table-format=+1.2]}
+\toprule
+Configuration & {$\delta=0.5$} & {$\delta=1.0$} & {$\delta=2.0$} \\
+\midrule
+R18 clean fixed-$T8$ & +1.15 & +2.73 & +2.24 \\
+R18 adv.\ fixed-$T8$ & +2.03 & +1.37 & +1.37 \\
+R18 clean mixed-$T$  & +0.14 & +0.14 & +0.14 \\
+R18 adv.\ mixed-$T$  & +0.68 & +0.68 & -0.35 \\
+\bottomrule
+\end{tabular}
+\\\vspace{0.4em}
+\small Ordering and conclusion are stable; magnitudes are not.
+\end{frame}
+
+\begin{frame}{B2: Fixed-$T$ Sweeps by Training Schedule}\framesubtitle{ResNet-18, clean accuracy (\%)}
+\centering\scriptsize
+\begin{tabular}{lcccccccc}
+\toprule
+Configuration & $T{=}1$ & $T{=}2$ & $T{=}3$ & $T{=}4$ & $T{=}5$ & $T{=}6$ & $T{=}7$ & $T{=}8$ \\
+\midrule
+clean fixed-$T8$ & 10.00 & 84.72 & 87.89 & 90.11 & 90.48 & 90.97 & 91.09 & 91.26 \\
+clean mixed-$T$  & 41.39 & 81.48 & 86.75 & 88.78 & 89.80 & 90.26 & 90.61 & 90.57 \\
+adv.\ fixed-$T8$ & 12.11 & 57.51 & 66.79 & 69.35 & 71.46 & 72.98 & 73.23 & 73.67 \\
+adv.\ mixed-$T$  & 46.28 & 70.04 & 74.31 & 76.26 & 76.82 & 77.14 & 77.58 & 77.79 \\
+\bottomrule
+\end{tabular}
+\\\vspace{0.4em}
+\small Mixed-$T$ lifts adversarial training at \emph{every} horizon; for clean training
+it only rescues $T=1$.
+\end{frame}
+
+\begin{frame}{B3: Attack-Seed Variance}\framesubtitle{Three attack seeds, one checkpoint, $n=1000$}
+\centering\small
+\begin{tabular}{llc}
+\toprule
+Operating point & Attack & Mean $\pm$ std \\
+\midrule
+\FIX{Fixed $T=8$}   & PGD        & $48.83 \pm 0.31$ \\
+\FIX{Matched fixed} & PGD        & $48.07 \pm 0.85$ \\
+\VT{VT selected}    & PGD        & $49.03 \pm 0.50$ \\
+\midrule
+\FIX{Fixed $T=8$}   & AutoAttack & $31.53 \pm 0.75$ \\
+\FIX{Matched fixed} & AutoAttack & $30.00 \pm 0.85$ \\
+\VT{VT selected}    & AutoAttack & $29.83 \pm 1.33$ \\
+\bottomrule
+\end{tabular}
+\\\vspace{0.4em}
+\small Attack randomness contributes at most $1.33$ points. Training variance is larger.
+\end{frame}
+
+\begin{frame}{B4: Clean-Trained Models Collapse Entirely}\framesubtitle{No robustness to preserve}
+\centering\small
+\begin{tabular}{lS[table-format=2.2]S[table-format=2.2]S[table-format=2.2]S[table-format=2.2]}
+\toprule
+Backbone & {PGD \FIX{fixed}} & {PGD \VT{VT}} & {AA \FIX{fixed}} & {AA \VT{VT}} \\
+\midrule
+ResNet-18   & 0.00 & 0.02 & 0.06 & 0.02 \\
+VGG16       & 0.05 & 0.10 & 0.00 & 0.00 \\
+MobileNetV2 & 5.10 & 4.95 & 5.25 & 5.40 \\
+\bottomrule
+\end{tabular}
+\\\vspace{0.4em}
+\small The inference policy is irrelevant when the backbone has no adversarial training.
+\end{frame}
+
+\begin{frame}{B5: SynOps Accounting}\framesubtitle{Methodology}
+\begin{itemize}\small
+  \item SynOps $=$ dense ops $\times$ input activation sparsity, summed over convolutional
+        and linear layers, over all executed timesteps.
+  \item \texttt{avg\_dense\_ops} depends only on architecture and $T$, and is used here as
+        an architecture fingerprint.
+  \item VT compute is measured \textbf{sample-exact}: each sample is executed individually,
+        not as a batched proxy.
+  \item SynOps is an algorithmic proxy for energy, \textbf{not} a hardware measurement.
+\end{itemize}
+\end{frame}
+
+\end{document}
