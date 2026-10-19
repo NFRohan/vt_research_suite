@@ -1,0 +1,415 @@
+\chapter{Methodology}
+\label{ch:method}
+
+This chapter describes how the study was carried out. \secref{sec:meth-overview} gives an overview of the pipeline. \secref{sec:meth-formulation} formalises spiking inference, fixed-timestep inference and variable timing. \secref{sec:meth-models} describes the three backbones and \secref{sec:meth-training} the training regimes and schedules. \secref{sec:meth-data} describes the data splits. \secref{sec:meth-synops} defines the compute metric, \secref{sec:meth-protocol} the compute-matched evaluation protocol and \secref{sec:meth-selection} the operating-point selection rules. \secref{sec:meth-stoprules} describes the stopping-rule comparison, \secref{sec:meth-attacks} the threat model and attacks, and \secref{sec:meth-stats} the multi-seed design and statistical tests. \secref{sec:meth-impl} documents the implementation.
+
+\section{Overview}
+\label{sec:meth-overview}
+
+\figref{fig:pipeline} summarises the pipeline. Each model configuration is defined by a backbone, a training regime and a timestep schedule. After training, the model is evaluated in two inference modes on a held-out calibration split: fixed-timestep inference at every horizon $T \in \{1, \dots, 8\}$, and VT inference at every threshold $\theta$ in a fixed grid. Each VT point is paired with the fixed horizon of nearest measured compute. An operating point is selected on the calibration split and then reported on the test split, where it is also attacked. The adversarially trained configurations are additionally re-trained with three seeds to test which conclusions replicate.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        box/.style={draw, rounded corners=2pt, align=center, font=\footnotesize, minimum height=12mm, text width=23mm, inner sep=2pt, fill=white},
+        grp/.style={draw, dashed, rounded corners=3pt, inner sep=3pt, fill=boxbg},
+        arr/.style={-{Stealth[length=2mm]}, thick}
+    ]
+        \node[box] (cfg)   at (0, 0)       {Configuration\\[1pt]\scriptsize backbone $\times$ regime\\\scriptsize $\times$ schedule};
+        \node[box] (train) at (3.4, 0)     {Training\\[1pt]\scriptsize 100 epochs,\\\scriptsize clean or RFGSM};
+        \node[box] (fixed) at (6.8, 0.85)  {Fixed-$T$ sweep\\[1pt]\scriptsize $T = 1, \dots, 8$};
+        \node[box] (vt)    at (6.8, -0.85) {VT sweep\\[1pt]\scriptsize $\theta = 0.5, \dots, 0.99$};
+        \node[box] (match) at (10.2, 0)    {SynOps matching\\[1pt]\scriptsize nearest fixed $T$\\\scriptsize for each $\theta$};
+        \node[box] (select) at (10.2, -3.2) {Operating-point\\selection\\\scriptsize VT-neutral / max-gain};
+        \node[box] (test)   at (6.8, -3.2)  {Test-split report\\[1pt]\scriptsize accuracy, SynOps,\\\scriptsize exit depth};
+        \node[box] (attack) at (3.4, -3.2)  {Attacks\\[1pt]\scriptsize PGD-20, AutoAttack,\\\scriptsize wrong exit, overuse};
+        \node[box, fill=boxbg] (seeds) at (0, -3.2) {Multi-seed\\replication\\\scriptsize 3 seeds, paired tests};
+        \begin{scope}[on background layer]
+            \node[grp, fit=(fixed)(vt)(match)(select)] (cal) {};
+        \end{scope}
+        \node[font=\scriptsize, anchor=south east] at (cal.north east) {calibration split};
+        \draw[arr] (cfg) -- (train);
+        \draw[arr] (train.east) -- ++(0.35,0) |- (fixed.west);
+        \draw[arr] (train.east) -- ++(0.35,0) |- (vt.west);
+        \draw[arr] (fixed.east) -- ++(0.35,0) |- (match.west);
+        \draw[arr] (vt.east) -- ++(0.35,0) |- (match.west);
+        \draw[arr] (match) -- (select);
+        \draw[arr] (select) -- (test);
+        \draw[arr] (test) -- (attack);
+        \draw[arr] (attack) -- (seeds);
+    \end{tikzpicture}
+    \caption[Overview of the experimental pipeline]{Overview of the experimental pipeline. Sweeps and operating-point selection use the calibration split, and all reported numbers use the test split.}
+    \label{fig:pipeline}
+\end{figure}
+
+\section{Problem Formulation}
+\label{sec:meth-formulation}
+
+\subsection{Spiking neurons}
+
+All networks in this thesis use deterministic leaky integrate-and-fire neurons. Let $I_t$ be the input current to a neuron at timestep $t$ (the output of the preceding convolution and batch normalisation), $V_t$ its membrane potential and $S_t \in \{0, 1\}$ its output spike. With time constant $\tau$ and firing threshold $V_\mathrm{th}$, the neuron is updated as
+\begin{align}
+    H_t &= V_{t-1} + \frac{1}{\tau}\left(I_t - V_{t-1}\right), \label{eq:lif-charge}\\
+    S_t &= \Theta\left(H_t - V_\mathrm{th}\right), \label{eq:lif-fire}\\
+    V_t &= H_t \left(1 - S_t\right), \label{eq:lif-reset}
+\end{align}
+where $\Theta$ is the Heaviside step function and $V_0 = 0$. \eqnref{eq:lif-charge} integrates the input with leak, \eqnref{eq:lif-fire} emits a spike when the charged potential reaches the threshold, and \eqnref{eq:lif-reset} resets the potential to zero after a spike (hard reset). We use $\tau = 2$ and $V_\mathrm{th} = 0.5$ throughout.
+
+The derivative of $\Theta$ is replaced during backpropagation by the surrogate
+\begin{equation}
+    \frac{\partial S_t}{\partial H_t} \approx \frac{\alpha}{2\left(1 + \alpha \left|H_t - V_\mathrm{th}\right|\right)^2}, \qquad \alpha = 4,
+    \label{eq:surrogate}
+\end{equation}
+and the reset term is detached from the computational graph, a common choice that improves training stability. Because the neurons are deterministic, the same input always produces the same spike train, so there is no stochastic component for an attacker to average over.
+
+\subsection{Input encoding and readout}
+
+We use direct encoding: the normalised image $x$ is fed to the first convolutional layer unchanged at every timestep, and the first layer of LIF neurons converts it into spikes. All subsequent layers communicate by spikes, except the final linear classifier, which produces real-valued logits $z_t \in \mathbb{R}^{K}$ at every timestep, with $K = 10$ classes.
+
+The network's prediction after $t$ timesteps is based on the running mean of these logits,
+\begin{equation}
+    \bar{z}_t = \frac{1}{t} \sum_{s=1}^{t} z_s, \qquad \hat{y}_t = \arg\max_{k} \, \bar{z}_{t,k}.
+    \label{eq:accum}
+\end{equation}
+Because the membrane potentials start at zero and need time to charge, the deep layers of the network emit few or no spikes at $t = 1$, and $\bar{z}_1$ is nearly independent of the input. As a result, fixed-horizon accuracy at $T = 1$ is at or near chance for most of our models (\tabref{tab:res-fixed}).
+
+\subsection{Fixed-timestep inference}
+
+Fixed-timestep inference with horizon $T$ runs every input for exactly $T$ timesteps and predicts $\hat{y}_T$. Its compute is the same for every input (up to differences in spike sparsity) and grows roughly linearly with $T$. Sweeping $T$ from 1 to 8 traces the fixed-timestep compute--accuracy curve, which serves as the baseline for VT.
+
+\subsection{Variable timing}
+
+Variable timing adds a stopping rule. Let $c(\cdot)$ map accumulated logits to a confidence score in $[0, 1]$, and let $\theta$ be a threshold. The exit time of input $x$ is
+\begin{equation}
+    \tau_\theta(x) = \min\left\{ t \in \{1, \dots, T_{\max}\} \;:\; c\left(\bar{z}_t(x)\right) \geq \theta \right\},
+    \label{eq:exit}
+\end{equation}
+with $\tau_\theta(x) = T_{\max}$ if no such $t$ exists, and the VT prediction is $\hat{y}_{\tau_\theta(x)}$. We use $T_{\max} = 8$. The main stopping rule is the maximum softmax probability,
+\begin{equation}
+    c_{\mathrm{MSP}}(\bar{z}) = \max_{k} \operatorname{softmax}(\bar{z})_k,
+    \label{eq:msp}
+\end{equation}
+which is the most common choice in the VT literature and a strong baseline in confidence estimation generally~\cite{hendrycks2017baseline}. Alternative rules are compared in \secref{sec:meth-stoprules}.
+
+\figref{fig:vt-mechanism} illustrates the mechanism. After every timestep, the confidence of the accumulated prediction is compared with $\theta$. An easy input crosses the threshold early and exits, while a hard input continues until it crosses the threshold or reaches $T_{\max}$. The average exit depth $\mathbb{E}_x[\tau_\theta(x)]$ and the average compute fall as $\theta$ decreases.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[x=1.25cm, y=3.2cm, font=\footnotesize]
+        \draw[-{Stealth[length=2mm]}] (0.5,0) -- (8.6,0) node[right] {$t$};
+        \draw[-{Stealth[length=2mm]}] (0.5,0) -- (0.5,1.08) node[above] {$c(\bar{z}_t)$};
+        \foreach \t in {1,...,8} \draw (\t,0.02) -- (\t,-0.02) node[below] {\t};
+        \draw[dashed, catk, thick] (0.5,0.7) -- (8.4,0.7) node[right] {$\theta$};
+        % easy input
+        \draw[cvt, very thick] (1,0.12) -- (2,0.55) -- (3,0.78);
+        \fill[cvt] (3,0.78) circle (2pt);
+        \node[cvt, right] at (3.08,0.82) {easy input exits at $t=3$};
+        % hard input
+        \draw[cfix, very thick] (1,0.12) -- (2,0.3) -- (3,0.38) -- (4,0.5) -- (5,0.47) -- (6,0.6) -- (7,0.64) -- (8,0.66);
+        \fill[cfix] (8,0.66) circle (2pt);
+        \node[cfix, below] at (6.4,0.45) {hard input runs to $T_{\max}=8$};
+        % attacked input
+        \draw[catk, very thick] (1,0.12) -- (2,0.74);
+        \fill[catk] (2,0.74) circle (2pt);
+        \node[catk, right] (advlab) at (3.4,1.0) {adversarial input: confident and wrong at $t=2$};
+        \draw[catk, thin] (2.06,0.76) -- (advlab.west);
+    \end{tikzpicture}
+    \caption[Variable-timing inference]{Variable-timing inference. The confidence of the accumulated prediction is checked after every timestep, and an input exits as soon as it reaches the threshold $\theta$. An adversary can try to make an input exit early with a wrong prediction (red), or to keep its confidence below $\theta$ so that it never exits early (\secref{sec:meth-attacks}).}
+    \label{fig:vt-mechanism}
+\end{figure}
+
+\paragraph{Sample-exact execution.} In a batched implementation, a batch keeps running until all its inputs have exited, and exited inputs simply carry their frozen predictions. This does not change predictions, but it does change measured compute: a batch-level measurement charges every input for the slowest input's timesteps. We therefore measure compute with \emph{sample-exact} accounting, in which each input's synaptic operations are counted only up to its own exit time (\secref{sec:meth-synops}). The reported VT compute is exactly what a per-sample implementation on event-driven hardware would incur.
+
+\section{Backbone Architectures}
+\label{sec:meth-models}
+
+We use spiking versions of three standard convolutional architectures, chosen to span a range of depth, width and parameter count. In every case, each ReLU of the original architecture is replaced by an LIF neuron (\eqnref{eq:lif-charge}--\eqref{eq:lif-reset}), and the final classifier is a real-valued linear layer. \tabref{tab:backbones} summarises them.
+
+\begin{itemize}
+    \item \textbf{ResNet-18}~\cite{he2016deep}, CIFAR variant: a $3\times3$ stem convolution with 64 channels followed by four stages of two basic residual blocks each with 64, 128, 256 and 512 channels, global average pooling and a linear classifier. LIF neurons follow every batch-normalised convolution, including on the shortcut path.
+    \item \textbf{VGG16}~\cite{simonyan2015very}: thirteen $3\times3$ convolutions in five stages (2, 2, 3, 3 and 3 layers with 64, 128, 256, 512 and 512 channels), each followed by batch normalisation~\cite{ioffe2015batch} and an LIF neuron, with max pooling between stages and a classifier with two spiking hidden layers of 4096 units.
+    \item \textbf{MobileNetV2}~\cite{sandler2018mobilenetv2}: inverted residual blocks with depthwise-separable convolutions in seven stages (16, 24, 32, 64, 96, 160 and 320 output channels with 1, 2, 3, 4, 3, 3 and 1 blocks), with LIF neurons replacing the ReLU6 activations.
+\end{itemize}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Backbones used in this thesis. Dense operations are the multiply--accumulate operations a non-spiking network of the same shape would perform over eight timesteps, per image.}
+    \label{tab:backbones}
+    \small
+    \begin{tabular}{@{}l r r r@{}}
+        \toprule
+        Backbone & Parameters & Dense ops at $T=8$ & Full-horizon SynOps (clean model) \\
+        \midrule
+        ResNet-18   & 11.2\,M & $4.44 \times 10^{9}$ & $4.14 \times 10^{8}$ \\
+        VGG16       & 33.6\,M & $2.66 \times 10^{9}$ & $1.82 \times 10^{8}$ \\
+        MobileNetV2 & 2.2\,M  & $0.70 \times 10^{9}$ & $3.77 \times 10^{8}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The SynOps column of \tabref{tab:backbones} already shows the effect of spike sparsity: a spiking ResNet-18 at its full horizon performs fewer than a tenth of the operations of its dense counterpart, because most activations are zero at any given timestep. MobileNetV2, despite having the fewest dense operations, performs more synaptic operations than VGG16, because its depthwise and expansion layers are much less sparse.
+
+\section{Training}
+\label{sec:meth-training}
+
+\subsection{Training regimes}
+
+Every backbone is trained under two regimes.
+
+\paragraph{Clean.} The model is trained on clean images with the cross-entropy loss $\mathcal{L}_{\mathrm{CE}}(f_T(x), y)$ of the accumulated logits after the training horizon $T$.
+
+\paragraph{Adversarial.} The model is trained entirely on adversarial examples generated on the fly with FGSM from a random start (RFGSM)~\cite{tramer2018ensemble, wong2020fast}. For each training image, a random perturbation $\delta_0 \sim \mathcal{U}[-\gamma\epsilon, \gamma\epsilon]^d$ is drawn, a single signed gradient step is taken, and the result is projected onto the $\epsilon$-ball:
+\begin{equation}
+    x_{\mathrm{adv}} = \operatorname{clip}_{[0,1]}\!\left(x + \Pi_{\epsilon}\!\left[\delta_0 + \alpha \operatorname{sign}\!\left(\nabla_{\delta} \mathcal{L}_{\mathrm{CE}}\left(f_T(x + \delta_0), y\right)\right)\right]\right),
+    \label{eq:rfgsm}
+\end{equation}
+with $\epsilon = \alpha = 8/255$ and $\gamma = 0.1$. The model is then updated on $\mathcal{L}_{\mathrm{CE}}(f_T(x_{\mathrm{adv}}), y)$ only, and no clean images are used.
+
+The two regimes are deliberately pure: every checkpoint in this thesis was trained with a fixed clean fraction of exactly 0\% or 100\%, so that any difference between them can be attributed to the regime itself.
+
+\subsection{Timestep schedules}
+
+The training horizon is set by one of two schedules.
+
+\paragraph{Fixed-T8.} Every training batch uses $T = 8$. This is the standard setting for directly trained SNNs and the schedule used for all three backbones.
+
+\paragraph{Mixed-T.} For every training batch, $T$ is drawn uniformly from $\{1, \dots, 8\}$. Training at short horizons should make early predictions more useful, which matters for VT because VT relies on them. We train mixed-T models for ResNet-18 under both regimes to test this.
+
+\subsection{Optimisation and hyperparameters}
+
+All models are trained for 100 epochs with stochastic gradient descent (momentum 0.9, weight decay $10^{-4}$, base learning rate 0.1, batch size 256), with a linear warm-up over the first five epochs followed by cosine decay~\cite{loshchilov2017sgdr}. We use automatic mixed precision with float16~\cite{micikevicius2018mixed} and clip the gradient norm at 1.0. Training images are augmented with random cropping (4-pixel padding), horizontal flipping and Cutout~\cite{devries2017improved} with one $16\times16$ hole. Clean validation accuracy at the full horizon is evaluated every five epochs, and the checkpoint with the highest validation accuracy is kept. \tabref{tab:app-hparams} in Appendix~\ref{app:hparams} lists every hyperparameter.
+
+\subsection{Model configurations}
+
+\tabref{tab:configs} lists the nine trained configurations. ResNet-18 is the primary backbone: it is trained under both regimes and both schedules, and the adversarial fixed-T8 configuration was trained twice with identical settings. VGG16 and MobileNetV2 are trained with the fixed-T8 schedule under both regimes.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Model configurations. The short names are used in the results tables and figures.}
+    \label{tab:configs}
+    \small
+    \begin{tabular}{@{}l l l l l@{}}
+        \toprule
+        Short name & Backbone & Regime & Schedule & Note \\
+        \midrule
+        R18 clean        & ResNet-18   & Clean       & Fixed-T8 & \\
+        R18 adv (1)      & ResNet-18   & Adversarial & Fixed-T8 & first run \\
+        R18 adv (2)      & ResNet-18   & Adversarial & Fixed-T8 & identical re-run \\
+        R18 clean mixT   & ResNet-18   & Clean       & Mixed-T  & \\
+        R18 adv mixT     & ResNet-18   & Adversarial & Mixed-T  & \\
+        VGG clean        & VGG16       & Clean       & Fixed-T8 & \\
+        VGG adv          & VGG16       & Adversarial & Fixed-T8 & \\
+        MBv2 clean       & MobileNetV2 & Clean       & Fixed-T8 & \\
+        MBv2 adv         & MobileNetV2 & Adversarial & Fixed-T8 & \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Data and Splits}
+\label{sec:meth-data}
+
+All experiments use CIFAR-10~\cite{krizhevsky2009learning}: 50{,}000 training and 10{,}000 test images of size $32 \times 32$ in ten classes. We split the official training set with a fixed seed into three disjoint parts (\figref{fig:splits}): 40{,}000 images for training, 5{,}000 for validation (checkpoint selection) and 5{,}000 for calibration (threshold sweeps and operating-point selection). The 10{,}000 test images are used only for reporting. Separating calibration from test ensures that the operating point is chosen without looking at the data on which it is reported.
+
+Adversarial evaluation is expensive, so attacks are run on a class-balanced subset of the test set: 2{,}000 images (200 per class) for the single-run experiments and 1{,}000 images (100 per class) for the multi-seed experiments, drawn with a fixed seed. The earliest ResNet-18 experiments were attacked on the full test set, which is noted where relevant.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[font=\footnotesize]
+        \def\h{0.7}
+        \fill[cfix!70] (0,0) rectangle (8,\h);
+        \fill[cfix!35] (8,0) rectangle (9,\h);
+        \fill[cvt!60] (9,0) rectangle (10,\h);
+        \draw (0,0) rectangle (10,\h);
+        \node[white] at (4,\h/2) {Train (40{,}000)};
+        \node at (8.5,\h/2) {Val};
+        \node at (9.5,\h/2) {Calib};
+        \node[below] at (8.5,0) {\scriptsize 5{,}000};
+        \node[below] at (9.5,0) {\scriptsize 5{,}000};
+        \node[left] at (0,\h/2) {CIFAR-10 train};
+        \fill[catk!45] (0,-1.3) rectangle (10,-1.3+\h);
+        \draw (0,-1.3) rectangle (10,-1.3+\h);
+        \node at (5,-1.3+\h/2) {Test (10{,}000): all clean results};
+        \fill[catk!80] (0,-1.3) rectangle (2,-1.3+\h);
+        \node[white] at (1,-1.3+\h/2) {\scriptsize attack subset};
+        \node[left] at (0,-1.3+\h/2) {CIFAR-10 test};
+        \node[below, align=center] at (1,-1.3) {\scriptsize 2{,}000 (single run)\\\scriptsize 1{,}000 (multi-seed)};
+    \end{tikzpicture}
+    \caption[Data splits]{Data splits. Training uses 40{,}000 images. Checkpoints are selected on validation, operating points on calibration, and all results are reported on test. Attacks use a class-balanced test subset.}
+    \label{fig:splits}
+\end{figure}
+
+\section{Compute Accounting}
+\label{sec:meth-synops}
+
+We measure compute in synaptic operations. For a convolutional or linear layer $\ell$ executed at timestep $t$, let $D_\ell$ be the number of multiply--accumulate operations a dense execution would perform and $\rho_{\ell,t}(x)$ the fraction of the layer's input activations that are non-zero. The synaptic operations of the layer are $D_\ell \, \rho_{\ell,t}(x)$: only non-zero inputs trigger work. For an input that runs for $\tau(x)$ timesteps,
+\begin{equation}
+    \SynOps(x) = \sum_{t=1}^{\tau(x)} \sum_{\ell} D_\ell \, \rho_{\ell,t}(x),
+    \label{eq:synops}
+\end{equation}
+and we report the mean over the evaluation set. For the first layer, whose input is the real-valued image, $\rho = 1$, so its dense cost is counted in full at every timestep. For fixed-timestep inference $\tau(x) = T$, and for VT $\tau(x) = \tau_\theta(x)$, measured per sample. SynOps is a hardware-independent proxy: it captures the effect of both sparsity and exit depth, but not memory access or membrane-update costs~\cite{dampfhoffer2023snns}. We use it to compare VT and fixed-timestep inference on the same network, where those omitted costs scale similarly with the number of timesteps run.
+
+\section{Compute-Matched Evaluation Protocol}
+\label{sec:meth-protocol}
+
+For each trained model, we run two sweeps on the calibration split and repeat them on the test split:
+
+\begin{itemize}
+    \item a \emph{fixed sweep} at $T \in \{1, \dots, 8\}$, recording accuracy and mean SynOps, and
+    \item a \emph{VT sweep} at $\theta \in \Theta = \{0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99\}$, recording accuracy, mean exit depth, the histogram of exit times and mean SynOps.
+\end{itemize}
+
+Each VT point $\theta$ is then paired with its \emph{compute-matched control}: the fixed horizon whose mean SynOps is closest to that of VT at $\theta$,
+\begin{equation}
+    T^{*}(\theta) = \arg\min_{T \in \{1,\dots,8\}} \left| \SynOps_{\VT}(\theta) - \SynOps_{\mathrm{fix}}(T) \right|.
+    \label{eq:match}
+\end{equation}
+The \emph{gain} of VT at $\theta$ is its accuracy minus that of the matched control,
+\begin{equation}
+    \Delta(\theta) = \mathrm{Acc}_{\VT}(\theta) - \mathrm{Acc}_{\mathrm{fix}}\left(T^{*}(\theta)\right).
+    \label{eq:gain}
+\end{equation}
+A positive gain means that, for roughly the same compute, choosing when to stop per input is better than stopping every input at the same time. Because the fixed horizons are discrete, the match is approximate. We report both SynOps values so that the residual mismatch is visible, and we additionally report whether each VT point lies above the piecewise-linear fixed-timestep frontier.
+
+We also report VT against the \emph{full-horizon} model ($T = 8$). This comparison answers a different question, namely what VT gives up relative to running the whole budget, and both are needed to interpret the robustness results.
+
+\section{Operating-Point Selection}
+\label{sec:meth-selection}
+
+Every reported VT result is at some threshold, and the threshold must be selected without looking at test data. We consider two selection rules, both applied to the calibration sweeps.
+
+\paragraph{Max-gain selection.} The rule used in our original experiments selects the threshold with the largest gain over its matched control on the calibration split, $\hat\theta_{\mathrm{gain}} = \arg\max_{\theta} \Delta_{\mathrm{cal}}(\theta)$. This rule is natural, since it picks the point where VT looks best, but it is \emph{biased} in favour of VT: it rewards VT on exactly the comparison it is being evaluated on, and it can prefer points where both VT and its control are poor, as long as the control is poorer. We show in \secref{sec:res-selection} that this happens in practice.
+
+\paragraph{VT-neutral selection.} The alternative rule ignores the matched control entirely. Given a tolerance $\delta$, it selects the cheapest threshold whose calibration accuracy is within $\delta$ points of the full-horizon accuracy:
+\begin{equation}
+    \hat\theta_{\delta} = \arg\min_{\theta \in \Theta} \left\{ \SynOps_{\VT,\mathrm{cal}}(\theta) \;:\; \mathrm{Acc}_{\VT,\mathrm{cal}}(\theta) \geq \mathrm{Acc}_{\mathrm{fix},\mathrm{cal}}(8) - \delta \right\}.
+    \label{eq:neutral}
+\end{equation}
+If no threshold meets the tolerance, the most accurate threshold is chosen. This is the rule a practitioner would actually use: decide how much accuracy one is willing to give up, then take the cheapest setting that meets it. Because it never looks at the fixed-timestep controls, it cannot favour VT in the comparison with them. \algref{alg:neutral} gives the full procedure. We use $\delta = 1$ point as the primary setting and report $\delta \in \{0.5, 2\}$ as a sensitivity analysis.
+
+\begin{algorithm}[htbp]
+    \caption{VT-neutral operating-point selection and compute-matched reporting}
+    \label{alg:neutral}
+    \begin{algorithmic}[1]
+        \Require trained model $f$; threshold grid $\Theta$; tolerance $\delta$; calibration set $\mathcal{D}_{c}$; test set $\mathcal{D}_{t}$
+        \For{$T = 1, \dots, 8$} \Comment{fixed sweep}
+            \State $(a^{c}_T, s^{c}_T) \gets$ accuracy and mean SynOps of $f$ at horizon $T$ on $\mathcal{D}_c$
+        \EndFor
+        \For{$\theta \in \Theta$} \Comment{VT sweep, sample-exact}
+            \State $(v^{c}_\theta, u^{c}_\theta) \gets$ accuracy and mean SynOps of VT$(f, \theta)$ on $\mathcal{D}_c$
+        \EndFor
+        \State $\mathcal{C} \gets \{\theta \in \Theta : v^{c}_\theta \geq a^{c}_8 - \delta\}$
+        \If{$\mathcal{C} = \emptyset$}
+            \State $\hat\theta \gets \arg\max_\theta v^{c}_\theta$ \Comment{fallback}
+        \Else
+            \State $\hat\theta \gets \arg\min_{\theta \in \mathcal{C}} u^{c}_\theta$
+        \EndIf
+        \State Evaluate VT$(f, \hat\theta)$ and fixed $T = 1..8$ on $\mathcal{D}_t$
+        \State $T^{*} \gets \arg\min_T |u^{t}_{\hat\theta} - s^{t}_T|$ \Comment{compute-matched control}
+        \State \Return $v^{t}_{\hat\theta} - a^{t}_{T^*}$, \; $v^{t}_{\hat\theta} - a^{t}_8$, \; $u^{t}_{\hat\theta} / s^{t}_8$
+    \end{algorithmic}
+\end{algorithm}
+
+\paragraph{Which rule was used where.} The clean-data results in this thesis are recomputed from the saved calibration and test sweeps under both rules, which requires no new model evaluations. The attack experiments, however, were run at the thresholds chosen by the max-gain rule (with one manual override, noted in \secref{sec:res-selection}), together with their immediate neighbours in $\Theta$. Re-running them at the VT-neutral thresholds was not possible within our compute budget. For the adversarially trained models, the two rules select the same or adjacent thresholds (\tabref{tab:res-selection}), so this affects the clean-trained robustness results most, and those are near zero under every rule.
+
+\section{Stopping Rules}
+\label{sec:meth-stoprules}
+
+To test whether the conclusions depend on the choice of confidence score, we compare five stopping rules, each computed on the accumulated logits $\bar{z}_t$ with $p = \operatorname{softmax}(\bar{z}_t)$:
+
+\begin{itemize}
+    \item \textbf{Max softmax}: $c = \max_k p_k$ (the primary rule, \eqnref{eq:msp}).
+    \item \textbf{Margin}: $c = p_{(1)} - p_{(2)}$, the difference between the two largest probabilities.
+    \item \textbf{Entropy}: $c = 1 - H(p) / \log K$, one minus the normalised predictive entropy.
+    \item \textbf{Temperature softmax}: $c = \max_k \operatorname{softmax}(\bar{z}_t / 2)_k$, MSP with temperature 2.
+    \item \textbf{Evidential surrogate}: with $\alpha_k = \operatorname{softplus}(\bar{z}_{t,k}) + 1$, $c = 1 - K / \sum_k \alpha_k$, one minus the Dirichlet uncertainty mass~\cite{sensoy2018evidential}.
+\end{itemize}
+
+Because the rules have different scales, comparing them at the same $\theta$ is meaningless. Instead, for each rule we choose the threshold whose mean exit depth on the calibration split is closest to that of the max-softmax operating point, and compare test accuracy at (approximately) equal depth. A rule that is better at identifying inputs that are already correctly classified will achieve higher accuracy at the same depth.
+
+\section{Threat Model and Attacks}
+\label{sec:meth-attacks}
+
+\subsection{Threat model}
+
+We consider a white-box adversary who knows the model weights, the stopping rule and the threshold, and who perturbs each test image within an $\ell_\infty$ ball of radius $\epsilon = 8/255$, keeping pixel values in $[0, 1]$. The adversary has one of three goals:
+
+\begin{enumerate}
+    \item \textbf{Misclassification}: make the final prediction wrong (untargeted attack).
+    \item \textbf{Wrong early exit}: make the input exit early with a wrong prediction.
+    \item \textbf{Compute overuse}: keep the prediction \emph{correct} but delay the exit, increasing the compute spent on the input.
+\end{enumerate}
+
+The first goal is the standard robustness setting. The second and third are specific to VT and target its exit gate.
+
+\subsection{Attacking through the exit gate}
+
+The exit decision in \eqnref{eq:exit} is a hard threshold, so it has no gradient. An attacker who differentiates only through the full-horizon output $\bar{z}_8$ is attacking a different function from the one being deployed. We therefore give the attacker the full trace: for each candidate perturbation, the network is run for all eight timesteps, the exit time $\tau_\theta(x)$ is determined from the per-timestep confidences, and the loss is computed on the accumulated logits $\bar{z}_{\tau_\theta(x)}$ at the actual exit step. Gradients flow through those logits and through all earlier timesteps' spiking dynamics, but not through the choice of exit step itself. This is an adaptive attack in the sense of Tram\`er et al.~\cite{tramer2020adaptive}: it attacks the deployed decision rule, not a proxy. Because our neurons are deterministic, no Expectation over Transformation is needed.
+
+\subsection{Misclassification attacks}
+
+\paragraph{PGD-20.} Projected gradient descent~\cite{madry2018towards} with 20 iterations, step size $2/255$, a uniform random start in the $\epsilon$-ball and the cross-entropy loss on the exit-step logits.
+
+\paragraph{AutoAttack.} The standard version of AutoAttack~\cite{croce2020reliable}: APGD-CE, APGD-T, FAB-T~\cite{croce2020minimally} and Square~\cite{andriushchenko2020square}, applied in sequence, each to the images that the previous attacks failed to break. The model is wrapped so that AutoAttack sees the VT decision rule through the exit-step logits as above.
+
+Each attack is applied to three inference modes on the same images: the full-horizon model ($T = 8$), the compute-matched fixed horizon $T^{*}$, and VT at the selected threshold. The fixed-mode models are attacked through their own $T$-step outputs.
+
+\subsection{Gate-specific attacks}
+
+Both gate-specific attacks use PGD with the same budget as PGD-20 but a different loss computed over the whole trace. Let $m_t(x) = \max_{k \neq y} \bar{z}_{t,k} - \bar{z}_{t,y}$ be the misclassification margin of the accumulated logits at step $t$ (positive when the prediction is wrong) and $c_t = c(\bar{z}_t)$ the confidence.
+
+\paragraph{Wrong early exit.} The attacker maximises a weighted sum of margin and confidence that emphasises early timesteps,
+\begin{equation}
+    \mathcal{L}_{\mathrm{early}} = \frac{1}{T_{\max}} \sum_{t=1}^{T_{\max}} w_t \left( m_t + \lambda_{\mathrm{c}} \, c_t \right), \qquad w_t = \frac{T_{\max} - t + 1}{T_{\max}},
+    \label{eq:wrong-exit}
+\end{equation}
+with $\lambda_{\mathrm{c}} = 0.25$, encouraging predictions that are wrong and confident as early as possible.
+
+\paragraph{Compute overuse.} The attacker maximises the normalised entropy $\tilde{H}_t$ and minimises the confidence of the accumulated prediction at every timestep, while preserving the correct final label:
+\begin{equation}
+    \mathcal{L}_{\mathrm{overuse}} = \frac{1}{T_{\max}} \sum_{t=1}^{T_{\max}} \left(\tilde{H}_t - c_t\right) \; - \; \lambda_{\mathrm{p}} \, \mathcal{L}_{\mathrm{CE}}\left(\bar{z}_{\tau}, y\right),
+    \label{eq:overuse}
+\end{equation}
+with $\lambda_{\mathrm{p}} = 1$. The first term pushes confidence below the threshold so that the input does not exit, and the second keeps the prediction correct, so that the attack is invisible to anyone monitoring accuracy. We report the increase in mean exit depth (depth inflation) and the fraction of attacked inputs that are still correctly classified. This attack is the SNN analogue of slowdown attacks on multi-exit networks~\cite{hong2021panda} and of sponge examples~\cite{shumailov2021sponge}.
+
+\subsection{Attack variance}
+
+For one checkpoint per adversarially trained backbone, PGD-20 and AutoAttack were repeated with three attack seeds (different random starts, and different random choices inside AutoAttack). The standard deviation across attack seeds was at most 1.74 points for every mode and backbone (\tabref{tab:app-attack-seed}), much smaller than the training-seed variance, so the remaining experiments use a single attack seed.
+
+\section{Multi-Seed Replication and Statistical Analysis}
+\label{sec:meth-stats}
+
+\subsection{Multi-seed design}
+
+Single-run results can be dominated by training variance. To test which conclusions replicate, the adversarially trained fixed-T8 configurations were re-trained from scratch with three seeds ($s \in \{0, 1, 2\}$) for ResNet-18 and VGG16, using the same pure-adversarial regime as the single-run models. For each seed, the operating point and its compute-matched control were selected on the calibration split, and clean accuracy, PGD-20 and AutoAttack were measured for the full-horizon, matched and VT modes on the same 1{,}000-image balanced test subset. A MobileNetV2 multi-seed run was also started but exceeded the 12-hour Kaggle session limit before its evaluations completed, so only its training histories and attack-seed variance are available.
+
+The multi-seed notebooks select operating points with the max-gain rule and save only the selected point, not the full sweeps, so they cannot be re-selected with the VT-neutral rule. The selected points are nevertheless sensible: for every seed, the VT point is within about three points of the full-horizon accuracy on clean data, and the matched horizons ($T^* = 5$ for ResNet-18, $T^* = 6$ for VGG16) are the same as those of the single-run VT-neutral points.
+
+\subsection{Paired differences}
+
+All comparisons are \emph{paired}: VT, its matched control and the full-horizon model are evaluated on the same checkpoint and the same images, and we analyse the per-checkpoint difference $d_s = \mathrm{Acc}_{\VT,s} - \mathrm{Acc}_{\mathrm{ref},s}$. Pairing removes the variation between checkpoints, which is large (up to 7 points in full-horizon AutoAttack accuracy across our ResNet-18 seeds), and isolates the effect of the inference mode~\cite{bouthillier2021accounting}.
+
+\subsection{Tests}
+
+For each comparison and metric we report the mean and sample standard deviation of $d_s$ over checkpoints, the number of checkpoints with $d_s > 0$, and two tests of the null hypothesis that the mean difference is zero:
+
+\begin{itemize}
+    \item a one-sample $t$-test on $\{d_s\}$, with $t = \bar{d} / (s_d / \sqrt{n})$ and $n - 1$ degrees of freedom, and
+    \item an exact two-sided sign test (binomial test on the number of positive differences), which makes no distributional assumption.
+\end{itemize}
+
+We pool the three ResNet-18 and three VGG16 seeds ($n = 6$) for the main tests and also report each backbone separately. With so few checkpoints these tests have limited power: a non-significant result means the data do not distinguish the difference from zero, not that the difference is zero. We therefore interpret them together with the sign of every individual seed.
+
+For single-run accuracies on $n$ images, we report the binomial 95\% confidence half-width $1.96 \sqrt{p(1-p)/n}$ as a guide to evaluation noise: about $\pm 0.6$--$1.0$ points for clean accuracy on the 10{,}000-image test set and about $\pm 2$ points for attacked accuracy on a 2{,}000-image subset. This captures only test-sampling noise. Training-seed variance, which is larger, is addressed by the multi-seed experiments.
+
+\section{Implementation and Reproducibility}
+\label{sec:meth-impl}
+
+\paragraph{Code base.} The experimental suite is written in PyTorch~\cite{paszke2019pytorch}. It descends from the BrainCog implementation of RandHet-SNN~\cite{wang2025random}, from which we retain the data pipeline and training scaffolding. We replaced the stochastic heterogeneous neurons with deterministic LIF neurons, removed the noise-scaling, Parseval and weight-perturbation components, and added the VT inference path with per-step traces, sample-exact compute accounting, the stopping rules, the compute-matched evaluation protocol, the gate-specific attacks and the multi-seed analysis. AutoAttack is run through the torchattacks library~\cite{kim2020torchattacks}, with the reference AutoAttack implementation as a fallback.
+
+\paragraph{Execution environment.} All training and evaluation ran on Kaggle GPU sessions with internet access disabled. CIFAR-10 and the attack libraries were attached as offline datasets. Each experiment is a self-contained notebook generated by a builder script, so that the exact code that produced a result is preserved alongside it. Mixed precision, TF32 matrix multiplication and cuDNN autotuning were enabled for speed.
+
+\paragraph{Analysis.} Every number in \chapref{ch:results} is computed by an analysis script from the raw CSV files written by the notebooks, and the script also writes a facts sheet that the text was checked against. Figures are generated from the same data. Appendix~\ref{app:repro} lists the files and the commands to regenerate them.
+
+\section{Summary}
+
+We study variable timing in deterministic LIF SNNs on CIFAR-10 across three backbones, two training regimes and two timestep schedules. Every VT operating point is compared with the fixed horizon of nearest measured compute, using sample-exact SynOps, and selected on a calibration split with a rule that does not favour VT. Robustness is measured with PGD-20 and AutoAttack by an attacker who differentiates through the exit-step logits, and two further attacks target the exit gate directly. Key comparisons are replicated across three training seeds and analysed with paired tests. The next chapter presents the results.

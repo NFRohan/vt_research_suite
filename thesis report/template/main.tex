@@ -1,0 +1,416 @@
+% !TeX program = pdflatex
+\documentclass{iutbscthesis}
+\usepackage{kantlipsum} % This package is used to generate place holder text. Remove it in the actual world.
+
+% The iutbscthesis uses biblatex for bibliography management.
+% You can learn the basics of biblatex from:
+% https://www.overleaf.com/learn/latex/Bibliography_management_with_biblatex
+\addbibresource{citations.bib}
+
+% The complete title of your thesis, mandatory
+\title{Title of the Thesis}
+
+% Use the \addauthor command to keep adding authors with student ID
+\addauthor{Student Abacus}{990041099}
+\addauthor{Student Beatle}{990041900}
+\addauthor{Student Cornstarch}{990041876}
+
+% Use the \supervisor command to define the supervisor with name, designation, and department
+% There needs to be one and only one supervisor
+\supervisor{Dr.\ Lou Natic}{Professor}{Department of Computer Science and Engineering}
+
+% Use the \addcosupervisor command to add a cosupervisor. There might be no cosupervisor at all
+% In that case, just remove all of the \addcosupervisor commands.
+\addcosupervisor{Dr.\ Sue Permann}{Assistant Professor}{Department of Computer Science and Engineering}
+\addcosupervisor{Mr. Francis FullOfFrenchPeople}{Lecturer}{Department of Computer Science and Engineering}
+
+% Complete department name, mandatory
+\department{Department of Computer Science and Engineering}
+
+% Complete program name, mandatory
+\program{BACHELOR OF SCIENCE IN COMPUTER SCIENCE AND ENGINEERING}
+
+% Date (day, month name, and year) when the presentation took place, mandatory
+\defensedate{04}{June}{2024}
+
+\begin{document}
+
+%-------------------------- FRONT MATTER --------------------------%
+
+% Generate cover page of the report to be printed on the hard cover
+\coverpage
+
+% Switch to roman page numbering
+\pagenumbering{roman}
+
+% Generate the title leaf, mandatory
+\titlepage
+
+% Auto generate declaration of candidate based on previous info, mandatory
+\declarationofcandidate
+
+% Dedicate report to someone. You may add more sentences to it.
+\dedicatedto{our supervisor without whom this degree would have been completed six months earlier}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\clearpage
+
+% Add abbreviations within this environment using the \abbr command
+\begin{abbreviations}
+    \abbr{CNN}{Convolutional Neural Network}
+    \abbr{PIP}{PIP Installs Packages}
+    \abbr{TikZ}{TikZ ist kein Zeichenprogramm}
+    \abbr{WIKI}{What I Know Is}
+\end{abbreviations}
+
+% Any acknowledgement that you want to write goes in the following environment
+\begin{acknowledgement}
+
+I am profoundly grateful to my supervisor, Dr.\ Lou Natic, for his endless patience, insightful critiques, and for always knowing just when to say, ``Have you tried turning it off and on again?'' His expertise and encouragement were instrumental in the completion of this thesis.
+
+A special thanks to my co-supervisor, Dr.\ Sue Permann, who provided invaluable support and the occasional pep talk disguised as a lecture on time management. Her unwavering belief in my work kept me going, even when the only thing I believed in was the power of procrastination.
+
+Finally, to my parents, whose love and support have been a constant source of strength. Thank you for always being there, for pretending to understand my research when I rambled on, and for not asking too many questions about why I was still not employed after all these years.
+
+To all of you, I extend my heartfelt appreciation and a promise: next time, I will take fewer detours through the land of streaming services.
+\end{acknowledgement}
+
+% Write your abstract here.
+\begin{abstract}
+    Abstracts are crucial summaries of a thesis, balancing brevity and clarity while effectively conveying the study's essence. Despite their importance, many writers struggle with creating abstracts that are neither too vague nor overly detailed. This abstract tackles the challenge by offering a structured approach to abstract writing, breaking down the process into five essential components: Introduction, Problem, Proposed Solution, Results, and Conclusion. Using humorous examples, this abstract makes the abstract-writing process engaging and accessible. Our method demonstrates significant improvements in the quality and readability of abstracts, as the humor helps demystify and simplify the process. Ultimately, effective abstract writing is both an art and a science, requiring precision, audience awareness, and a touch of fun to make it approachable and enjoyable.
+\end{abstract}
+
+%-------------------------- MAIN BODY --------------------------%
+% Switch to arabic page numbering
+\pagenumbering{arabic}
+
+\chapter{Introduction}
+Previously, the library recommended a green cover with gold lettering for undergraduate theses. It is advisable to confirm the current guidelines with your supervisor or the head of the library.
+
+The PDF is generated using XeLaTeX (switch your compiler accordingly.) The first page of this PDF is intended for printing on the front cover. The spine of the thesis book should display two key details: the title of the thesis, vertically aligned in the center, and the defense year, placed horizontally at the bottom.
+
+Each chapter including the current one contains some instructional text and some random filler text. You decide which one is which. The instructions are at times divided into multiple sections for easier understanding. Consult with your supervisor to discuss which sections are necessary, and which are not for your thesis book. The \autoref{chapter:citations} is a special chapter that should not be included in a traditional report, but is still here as a guide to shed some light on how to handle citations using \verb|biblatex|. Also, you should never use \texttt{verb} to highlight normal text. It is used here to mark packages and code components only. In real cases, use the \verb|emph| command instead. And yes to you, the one who highlights too many texts, just do not. Highlight only the necessary things.
+
+Here is a inspiring limerick for no reason at all --- ($\leftarrow$ learn when to use hyphen, endash, or emdash)
+
+\begin{quote}
+    Of facts and figures, we steer, \\
+    In writing, let's make it clear, \\
+    With data that flows, \\
+    And structure that shows, \\
+    A technical report we revere.
+\end{quote}
+
+The same limerick as a haiku can be written as ---
+
+\begin{quote}
+    Facts and figures clear, \\
+    Data flows, structure appears, \\
+    Technical report.
+\end{quote}
+
+\verb|iutbscthesis.cls| already includes a number of handy packages. Rest of the packages can be manually included in \verb|main.tex| file or any other \verb|tex| file by the writers. The list of already used packages is provided in \autoref{tab:packagelist}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{>{\ttfamily}r l}
+        geometry & CTAN \\
+        lmodern & CTAN \\
+        stix2 & CTAN \\
+        parskip & CTAN \\
+        setspace & CTAN \\
+        floatrow & CTAN \\
+        graphicx & CTAN \\
+        caption & CTAN \\
+        subcaption & CTAN \\
+        array & CTAN \\
+        booktabs & CTAN \\
+        amsmath & CTAN \\
+        xfrac & CTAN \\
+        listings & CTAN \\
+        upquote & CTAN \\
+        hyperref & CTAN \\
+        biblatex & CTAN \\
+        personnelhandler & Custom, provided in the project \\
+        frontmatter & Custom, provided in the project \\
+        appendix & CTAN \\
+        etoolbox & CTAN \\
+        pgffor & CTAN \\
+        xstring & CTAN \\
+    \end{tabular}
+    \caption{List of already included packges in iutbsthesis}
+    \label{tab:packagelist}
+\end{table}
+
+Remember, Any kind of tables or figures must be referred to in text, like \autoref{tab:testtable}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{c l}
+        \toprule
+        Heading 1 & Heading 2 \\
+        \midrule
+        Value 1 & A large value signifying many important data\\ 
+        Value 1 & A large value signifying many important data\\ 
+        \bottomrule
+    \end{tabular}
+    \caption{A dummy caption showing that caption for tables go on top}
+    \label{tab:testtable}
+\end{table}
+
+Similarly, we can also place figures as in \autoref{fig:lettercollection} and sub-figures as in \autoref{fig:letterA_sub}, \ref{fig:letterB_sub}, and \ref{fig:letterC_sub}. 
+
+\begin{figure}[H]
+    \centering
+
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{ImageA}
+        \caption{An elegant sub-figure of the letter `A'}
+        \label{fig:letterA_sub}
+    \end{subfigure}
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{ImageB}
+        \caption{An elegant sub-figure of the letter `B'}
+        \label{fig:letterB_sub}
+    \end{subfigure}
+    
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{ImageC}
+        \caption{An elegant sub-figure of the letter `C'}
+        \label{fig:letterC_sub}
+    \end{subfigure}
+    
+    \caption{A collection of elegant letters `A', `B', and `C'}
+    \label{fig:lettercollection}
+\end{figure}
+
+We can also add code snippets as shown in \autoref{lst:fibonacci}. IUT's rules do not mention anything related to code listing styles. So it is encouraged to use a fitting and elegant-looking custom style for it.
+
+\begin{lstlisting}[language=Python, caption={Python code for Fibonacci sequence}, label={lst:fibonacci}]
+# Python sample code
+def fibonacci(n):
+    """Generate a Fibonacci sequence up to n."""
+    a, b = 0, 1
+    while a < n:
+        print(a, end=' ')
+        a, b = b, a+b
+    print()
+
+# Call the function
+fibonacci(10)
+\end{lstlisting}
+
+\section{What sections to include in this chapter?}
+The Introduction chapter sets the stage for your thesis, providing an engaging overview of your research that captivates both academic readers and non-specialists alike. This is your opportunity to make a strong first impression, clearly defining the context and motivation for your work while laying a solid foundation for the technical material to follow.
+
+\subsection{Introductory Information}
+To begin, you should introduce your research topic with clarity, ensuring that any specialized terms or jargon are defined for readers who may be unfamiliar with them. Remember, your thesis may be read by individuals outside your immediate research area, so it's important to make the topic accessible. Visual aids, such as diagrams, charts, or graphs, can be particularly effective in illustrating complex concepts. They bring abstract ideas into focus and help readers visualize your research framework from the start. Additionally, briefly touch on the real-world applications of your work. If your research connects with contemporary trends—like artificial intelligence in healthcare or cybersecurity in the digital age—mentioning these can resonate with the reader and emphasize the relevance of your study.
+
+\subsection{Motivations and Scope}
+In this section, you should explain why your research matters. Begin by reflecting on what motivated you to tackle this particular problem. Personal experiences or global challenges might have inspired your interest. For example, perhaps you're driven by the potential societal impact of your work, or maybe the research addresses a critical gap in your field. This is where you connect your personal motivations with the broader implications of your study. Following this, provide a succinct review of key research that has informed your understanding of the topic. Keep this review brief—just enough to show how previous studies have contributed to your thinking—since you'll explore related works in more depth in the next chapter. Finally, highlight the limitations or gaps in current knowledge that your thesis seeks to address. By identifying these voids, you build a compelling case for why your research is necessary.
+
+\subsection{Problem Statement}
+The problem statement is the core of your thesis. It should be a concise, clear statement that encapsulates the issue your research is tackling. Following this, list two to four specific research objectives. These objectives will guide the structure of your work and must align closely with the problem you are addressing. These are not just high-level goals—they will shape how you approach the research and structure your experiments, making them crucial to the development of your thesis.
+
+\subsection{Research Challenges}
+Every field has its unique challenges, and this is the section where you should discuss those specific to your research domain. Avoid generic descriptions; instead, focus on the more nuanced difficulties your research aims to confront. For example, if you're working in machine learning, you might highlight the challenge of dealing with noisy data or balancing the trade-offs between algorithmic efficiency and accuracy. In language translation, the challenge might not simply be translating words but handling complex sentence structures, finding appropriate cultural or linguistic equivalents, or maintaining grammatical accuracy. Be sure to mention any unresolved challenges in your field that demand innovative solutions, particularly those your work seeks to address. This establishes the significance and difficulty of your project while showcasing the real obstacles that make your research exciting and valuable.
+
+\subsection{Contribution}
+Now that the stage is set, it's time to highlight the novel contributions of your thesis. Be specific about what sets your work apart. Whether you’ve developed a new algorithm, system, theory, or application, your contributions should be measurable and meaningful advancements in your field. After listing your contributions, you need to explain their significance. How do they advance existing knowledge? Why are they valuable? This is where you can underscore how your research pushes the boundaries of what has been done before, establishing your thesis as an important piece of work in the broader academic landscape.
+
+\subsection{Organization}
+Finally, provide a brief roadmap of your thesis. This section helps orient your reader and ensures a logical flow of ideas throughout the document. Explain how each chapter is structured and how the various parts of your thesis fit together to form a coherent whole. This organizational overview ensures that readers can follow your arguments and see the connections between your objectives, methods, and conclusions, leading them through the narrative of your research from introduction to conclusion.
+
+
+By framing your Introduction in this way, you not only provide necessary information but also engage your audience, building anticipation for the more detailed technical discussions that follow.
+
+\chapter{Related Works}
+The Related Works chapter serves as a comprehensive analysis of the most relevant research surrounding your thesis topic. Rather than a mere compilation of summaries, this chapter should tell the story of your research domain—tracing its origins, current standing, and future directions. By weaving together various threads of research, you not only position your work within the broader context but also set a strong foundation for your own contributions.
+
+\section{Structure a Narrative, Not a List}
+Rather than presenting each article in isolation, organize the literature into themes or categories that reflect major areas of research. For instance, if your thesis focuses on machine learning optimization techniques, you might categorize the literature into areas such as supervised learning, unsupervised approaches, and hybrid models. This thematic structure offers a clearer overview and allows readers to grasp the overarching patterns in the field. Begin each section with a strong topic sentence to introduce the theme, ensuring the studies within that category are cohesively connected. Instead of starting paragraphs with ``Author X did this...'', start with the problem or theme you are exploring, and then show how different researchers have approached that issue. This approach helps readers follow your line of reasoning and understand the connections between the works.
+
+\section{Analyze and Synthesize, Don't Just Summarize}
+A key element of a successful Related Works chapter is going beyond a simple summary. It is essential to analyze and synthesize the studies you review. Consider how different works are interconnected by asking critical questions such as: How do the findings of one paper support or contradict another? Are there common methodologies, and how do their results compare? What recurring themes emerge, and where do gaps remain in the research? Your review should also offer a critical evaluation of each study. What are the strengths and weaknesses of the various approaches? Are there limitations in the datasets, algorithms, or conclusions presented? Highlighting these aspects provides a richer understanding of the literature and points to areas where further research is needed.
+
+\section{Compare and Contrast Different Works}
+Using comparative language is an effective way to link studies together and provide deeper insights. For example, you might write, ``While Author A applied a rule-based system to solve X, Author B adopted a machine-learning approach, demonstrating that the latter provided more scalable results in Y context.'' Or, ``In contrast to the work of Author C, which assumes Z, Author D presents a method that overcomes this limitation by...'' These comparisons allow readers to see how research in your field has evolved and which approaches may be most relevant to your own work. By contrasting different methodologies and outcomes, you highlight the diversity of solutions and reveal the progress made, as well as the challenges that remain.
+
+\section{Identify Gaps and Opportunities}
+A crucial part of the Related Works chapter is identifying gaps and opportunities in the existing literature. Many studies may use limited datasets, rely on outdated algorithms, or address only specific aspects of a problem, leaving significant gaps in understanding. Pointing out these limitations not only underscores the novelty of your research but also shows how your thesis aims to fill these gaps or extend current knowledge. By doing this, you justify the significance of your own research and position it as a necessary contribution to advancing the field.
+
+\section{Use Transition Words for Cohesion}
+To create a cohesive narrative, it is important to use transition words and phrases effectively. Smooth transitions between ideas and studies enhance the readability and flow of your writing. Phrases like ``In addition to...'', ``Building upon the work of...'', ``Conversely, Author X found that...'', or ``Despite this, a more recent study by...'' help guide the reader through the complex landscape of the literature. Properly employed transitions make your argument easier to follow and ensure that the chapter reads as a cohesive whole rather than a disjointed collection of references.
+
+\section{Conclude with a Summary}
+End the chapter with a thoughtful summary that synthesizes the major trends and gaps in the literature. This summary should tie back to the core problem your thesis addresses and set the stage for your Proposed Methodology chapter. Rather than repeating what has already been discussed, focus on distilling the key insights and trends you’ve observed, and use this synthesis to reinforce the importance of your own research. By offering a well-rounded summary, you ensure that readers understand the context of your study and are prepared to explore how your research will build upon and contribute to the existing body of work.
+
+By following this approach, your Related Works chapter will present a cohesive, engaging narrative that not only maps the relevant literature but also provides critical insights into the evolution of research in your field. This will demonstrate your ability to engage deeply with the work of others and position your research as an important contribution to the academic discourse.
+
+\chapter{Proposed Methodology} \label{chapter:proposed}
+The Proposed Methodology chapter is the core of your thesis, where the approach to solving the research problem is presented in a detailed and structured manner. This chapter aims to provide a clear, step-by-step explanation of how you plan to address the problem outlined in the introduction. Each component of the methodology should be explained in a way that allows readers, even those less familiar with the specific technical details of the project, to understand both the structure and the rationale behind your choices. Clarity is essential, and visual aids should be used to enhance understanding where necessary.
+
+\section{Overview of the Methodology}
+
+To begin, provide a high-level overview of the methodology. This section introduces the key components and offers a broad structure of the overall approach. It is essential to explain why each component was chosen, highlighting its advantages and explaining why it was preferred over other alternatives. The reader should be able to see how these individual components fit together to form a cohesive system aimed at solving the research problem. A comprehensive figure, such as a flowchart or architecture diagram, should be included to visually represent the methodology, serving as a roadmap that helps the reader visualize how the components interact with one another and connect to the broader objectives of the study.
+
+\section{Chronological Breakdown of Components}
+
+Next, break down the methodology into its individual components, presented in the order in which they are executed. This section should offer a logical flow from one component to the next, demonstrating how each part builds upon the previous one to create an integrated system. For each component, several sub-sections will be required.
+
+Begin by clearly describing the role of each component. Explain the specific problem it solves and how it contributes to the overall system. Follow this by discussing the method or algorithm chosen for this component. For example, whether it's a machine learning algorithm, a database structure, or a communication protocol, provide enough technical detail for readers to understand how it works. Reference any theoretical foundations or literature that support your choice, and if a standard algorithm is used, explain why this particular approach was selected over others.
+
+Additionally, specify the type of data required as input for the component and what it produces as output. Where applicable, visual aids such as tables or diagrams should be included to clarify the flow of data. You should also explain the key principles or logic underlying the functionality of the component. For technical algorithms, this might involve discussing higher-level concepts such as how a neural network propagates data forward during training, but without delving into code-level specifics.
+
+Lastly, justify your design decisions. Detail why you chose this particular method or approach. Were there alternatives, and if so, why were they not selected? This section should reflect critical thinking, showing that choices were made deliberately, based on a reasoned evaluation of trade-offs. It's important to acknowledge that sometimes an approach is selected because it is the best available, even if it isn't perfect.
+
+\section{Integration and Interconnections}
+
+In this section, discuss how the individual components interact with each other. The reader should understand how data flows between components, and how these interactions contribute to achieving the overall research objective. This is crucial for demonstrating that the methodology is not just a collection of independent modules but a cohesive system where each component plays an interconnected role. For example, if your system involves feedback loops, dependencies, or iteration processes—such as updating a machine learning model during training—these interactions must be clearly described.
+
+Refer back to the architectural diagram introduced at the beginning of the chapter as you discuss these interactions. This ensures that readers can relate each described component to the larger structure, reinforcing their understanding of the entire methodology.
+
+\section{Clarity and Comprehensiveness in Visual Aids}
+
+Effective use of visual aids—such as diagrams, flowcharts, and graphs—is essential for making complex ideas more understandable. Each visual should add clear value to the explanation and should be meticulously labeled and accompanied by detailed captions that can stand alone. For instance, if your method involves multiple steps in data preprocessing, a flowchart can simplify what might otherwise seem like a complex series of operations.
+
+Aim for clarity in every visual. Avoid clutter, and ensure that each element is well-explained in the text. Good visuals should simplify technical concepts and make them accessible to a broad audience, even for particularly intricate methodologies.
+
+\section{Conclude with a Summary of the Methodology}
+
+Conclude this chapter with a summary of the overall methodology, reiterating how the individual components work together to achieve the research objectives. This recap should give readers a clear understanding of the entire system before moving on to the subsequent chapters on Results and Discussion. The summary serves as a final reminder of the methodology's coherence and structure, providing closure to the technical explanation of your approach.
+
+By following this structure, the Proposed Methodology chapter will present your approach in a clear, well-organized manner, making it accessible and engaging to your readers, while maintaining technical rigor.
+
+
+\chapter{Results and Discussion}
+The Results and Discussion chapter is where you present the key findings of your research and analyze their significance in relation to your research objectives. Whether combined or separated into two distinct sections, this chapter must go beyond simply displaying data, providing a detailed interpretation that connects the results with theoretical frameworks and empirical justifications. The choice to combine or separate the sections depends on the complexity of your findings, but in either format, this chapter should offer a compelling narrative that illuminates the implications of your work.
+
+\section{Datasets and Experimental Setup}
+
+The chapter begins with a clear description of the datasets used in your research. It's crucial to provide detailed information about the features of the data, including whether it is text-based, numerical, image-based, or of another type. You should also explain the size of the dataset, its sample distribution, and any inherent biases or imbalances that may affect the analysis. For instance, if your dataset has a significant class imbalance or contains noisy or missing data, describe the strategies employed to mitigate these issues, such as data augmentation, imputation methods, or rebalancing techniques. Including sample data or visualizations can further clarify the nature of the dataset, offering a glimpse into the raw materials of your research. This could take the form of snippets of text, feature distributions, or representative images, depending on the context.
+
+Once the dataset has been outlined, provide a thorough description of the experimental setup. Detail the computational environment, including the hardware, software libraries, and any cloud services utilized. Key hyperparameters such as learning rate, batch size, and the number of epochs should be listed, and if possible, their selection should be justified either theoretically or empirically. This justification could involve citing similar studies or explaining any tuning processes you conducted. Offering these insights helps the reader understand why specific choices were made and how they might influence the results.
+
+\section{Presenting the Results}
+
+The results themselves are presented next, starting with a brief summary of what types of outcomes you will report and how they relate to your research objectives. To ensure clarity and precision, results should be presented systematically. For quantitative findings, such as performance metrics (e.g., accuracy, precision, recall, F1 score), tables are an effective medium. Each table should be clearly labeled and referenced in the text, with concise descriptions of the data they present.
+
+Graphical representations such as bar charts, line graphs, and scatter plots should be used to illustrate trends or comparisons, such as how different models perform over time or how various configurations influence results. When appropriate, confusion matrices or ROC curves can be employed to visualize classification performance in more detail. However, at this stage, your focus should be on reporting the data, not interpreting it. If your research involves multiple phases or experiments, presenting each experiment's results separately will make the data easier to follow, especially when the phases involve distinct datasets or algorithms.
+
+\section{Interpreting the Results}
+
+Once the raw data has been presented, the focus shifts to interpreting the findings. This involves analyzing how the results align with or diverge from the hypotheses or research questions posed earlier. If certain findings contradict expectations, possible explanations should be provided, supported by relevant theory or prior research. For instance, unexpected results might be due to limitations in the dataset, overfitting, or other factors.
+
+Strengthen your interpretations by linking the results back to theoretical frameworks or previous studies. If a particular algorithm outperforms others, consider citing earlier work that supports this outcome, explaining why this might be the case. For example, you might discuss how the algorithm generalizes better due to a superior feature extraction process or faster convergence rates. On the other hand, if certain results are disappointing, explore the potential causes and consider whether similar patterns have been observed in related research.
+
+Comparisons with similar studies are important in this section. Highlight similarities and differences between your results and those reported by others, offering possible reasons for these divergences. For instance, you might say, "While Author A's method achieved an accuracy of 85% on a similar dataset, our approach improved this to 90% by employing an additional feature extraction step."
+
+\section{Challenges and Limitations}
+
+Reflecting on the challenges and limitations encountered during your research is an essential part of the discussion. Consider how these challenges may have impacted your results. Were there limitations in the dataset, such as a lack of diversity or imbalance? Did methodological or computational constraints affect the experiments? This reflection not only adds depth to your analysis but also paves the way for future research by acknowledging areas where further improvements could be made. Additionally, recognizing these limitations allows readers to contextualize the results within the scope of your study.
+
+\section{Implications and Significance of Findings}
+
+The broader implications of your findings need to be explored. What new knowledge or insights does your research contribute to the field? Consider how your results may influence future work, whether by suggesting new directions for research, optimizing existing methods, or offering real-world applications. For example, if your findings improve neural network performance in a specific domain, could this optimization be applied to industry settings, such as more efficient data processing or improved cybersecurity measures? By positioning your findings within the wider landscape of the field, you underscore the relevance and potential impact of your work.
+
+\section{Decision to Split or Combine Results and Discussion}
+
+Depending on the nature of your results, you may choose to either combine or split the Results and Discussion sections. If your research has produced a large volume of complex data, it may be beneficial to split these sections. In such cases, the Results chapter would focus solely on presenting the raw data, while the Discussion chapter would handle the analysis and interpretation. This approach can also be helpful if your research involved multiple distinct phases or both quantitative and qualitative data, allowing you to deal with each type or phase independently.
+
+On the other hand, if your results are straightforward or closely tied to their interpretation, combining the two sections can lead to a more concise and cohesive presentation. When results and interpretations are tightly intertwined—where explaining trends or patterns requires immediate analysis—a combined chapter helps maintain a logical flow, making it easier for the reader to follow the narrative.
+
+\section{Conclusion of the Chapter}
+
+Conclude this chapter by summarizing the key takeaways from your results and their significance. This final section should tie everything together, leading naturally into the Conclusion chapter, where you will reflect on the broader contributions of your research and suggest potential directions for future work. The summary serves as a moment of synthesis, reinforcing the most important insights gained from your findings and setting the stage for the overarching conclusions of your thesis.
+
+This structure ensures that the Results and Discussion chapter not only presents data but also thoughtfully interprets it, giving readers a comprehensive understanding of how the research findings relate to the broader field. By organizing the chapter in this manner, you maintain clarity and coherence, making the technical details accessible and engaging.
+
+
+\chapter{Conclusion}
+The Conclusion chapter is a critical reflection on the research conducted, encapsulating the key findings, contributions, and broader implications of the work. This final chapter serves to tie together the insights gained from your study, while also addressing its limitations and proposing potential directions for future research. The tone should be reflective, confident, and forward-looking, emphasizing the significance of the work without overstating its claims.
+
+\section{Restating Research Objectives and Questions}
+
+To begin, it is important to restate the main research objectives and questions that framed your thesis. This serves as a reminder of the foundational focus of the study, bringing the reader back to the core issues you set out to address. You should rephrase these objectives and questions succinctly, demonstrating how they guided the entire research process and structured the work you have accomplished. By revisiting these questions, you provide a clear context for evaluating the outcomes and contributions of your research.
+
+\section{Summary of Key Findings}
+
+Following the restatement of your research objectives, you should offer a concise summary of the most significant findings from your study. Focus on highlighting the key results that directly address your research objectives, ensuring that the discussion remains tightly connected to the goals outlined at the beginning of the thesis. It is essential to present the insights that stand out the most, emphasizing those that contribute the most meaningfully to the research questions posed. This summary should distill the essence of your findings, providing a clear and accessible synthesis of the work.
+
+\section{Discussion of Implications}
+
+Next, reflect on the broader implications of your findings. Consider how your results contribute to the existing body of knowledge within your field and how they answer the research questions you initially posed. This discussion should explore any theoretical, methodological, or empirical contributions made by your study. For example, if your findings offer new insights into a particular phenomenon or propose a novel methodological approach, these contributions should be clearly articulated. Moreover, it is important to relate your findings to the wider academic discourse, connecting them to the works discussed in the Related Works chapter. By positioning your research within the broader field, you highlight its relevance and the value it brings to ongoing scholarly conversations.
+
+\section{Contributions of the Research}
+
+You should provide a clear and structured account of the contributions your research has made. These contributions may take various forms: theoretical insights that challenge or extend existing frameworks, practical applications that could influence real-world scenarios, methodological advancements that provide new tools for future research, or empirical findings that add to the data-driven understanding of your field. Each type of contribution should be acknowledged and clearly articulated, giving readers a sense of the unique value your work brings to the academic and professional landscape.
+
+\section{Acknowledging Limitations}
+
+No research is without limitations, and it is important to be transparent about the constraints that may have influenced your results. Discuss the specific limitations of your study, such as sample size, scope, data quality, or technical challenges that arose during the research process. Acknowledging these limitations not only demonstrates intellectual honesty but also helps contextualize your findings, showing how they fit within the constraints of the study. Moreover, by openly discussing the limitations, you provide a foundation for future researchers.
+
+\section{Suggestions for Future Research}
+
+Based on your findings and the limitations identified, you should offer clear and thoughtful recommendations for future research. This section provides an opportunity to identify specific areas where further investigation is needed, suggesting how future studies might address unanswered questions or overcome the limitations you encountered. Where relevant, you may also propose new research directions or methodologies that could be applied to similar problems, offering a roadmap for how the field can advance in light of your work. By pointing to areas that require further exploration, you not only acknowledge the ongoing nature of academic inquiry but also position your research as a stepping stone for future developments.
+
+\section{Final Reflections}
+
+As you approach the end of the chapter, a final reflection on your research journey is appropriate. This could be a brief statement that encapsulates the significance of your study and its place within the broader research community. You may wish to share personal insights gained from conducting the research, including any unexpected outcomes or challenges that led to deeper learning. This reflection serves to humanize the research process, providing a glimpse into the intellectual and practical growth experienced throughout the thesis. It is also an opportunity to reflect on the broader impact of the study, reinforcing the relevance and potential contributions of your work.
+
+\section{Concluding Remarks}
+
+To close the chapter, end with a strong and definitive statement that encapsulates the contribution of your research and its potential for future impact. This final statement should provide a sense of closure, leaving the reader with a clear understanding of the significance of your work. Whether the research has practical implications, theoretical advancements, or methodological contributions, the concluding remarks should confidently assert the value of the study and its place in the field, while also gesturing toward the future possibilities it opens up.
+
+This approach ensures that the Conclusion chapter not only summarizes the research but also thoughtfully reflects on its significance and future potential, leaving the reader with a clear and compelling understanding of the work's broader impact.
+
+\chapter{Citations} \label{chapter:citations}
+This is not a chapter that you include in your thesis book. Rather it gives you an idea on how to provide citations.
+
+If we are using just bibtex, we can cite any normal things. For instance, \emph{The Design of Everyday Things} \cite{norman2013design} is a great book. We can also cite articles or proceedings and do multi-citations \cite{chao2023multimagCNN, mackenzie1992extending, 1careage2023intrinsic}.
+
+But anything more than that would require a package to work efficiently. There are some widely used packages like \verb|natbib| or \verb|biblatex|. \verb|biblatex| is newer and more robust than others. We will only talk about \verb|biblatex| today. We can also directly cite within the flow of text. \textcite{mackenzie1992extending} in their work showed stuffs. For some styles, where by default parenthesis are not used, we can use \verb|parencite| \parencite{mackenzie1992extending}. We may also cite, like \emph{The Design of Everyday Thing} \footcite{norman2013design} in the footnote; common for softwares, repositories, and in presentation. Ofcourse we can still do multicitations, like \cite{1careage2023intrinsic, chao2023multimagCNN, mackenzie1992extending, norman2013design}. For other types of citations, like \textcites{1careage2023intrinsic, chao2023multimagCNN, mackenzie1992extending} in their works did these.
+
+%-------------------------- BACK MATTER --------------------------%
+
+% Print the references used throughout the document, mandatory
+\printbib
+
+% You may attach chapter as appendices inside the following environment
+\begin{appendices}
+\chapter{Some Appendix Chapter}
+\kant[1]
+\begin{figure}[H]
+    \centering
+    \includegraphics{ImageA.png}
+    \caption{A figure in Appendix}
+    \label{fig:apxf1}
+\end{figure}
+
+\chapter{Some Other Appendix Chapter}
+\kant[2]
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        Hello & World \\
+        \hline
+        How & Are \\
+        \hline
+        \multicolumn{2}{|c|}{You?}\\
+        \hline
+    \end{tabular}
+    \caption{A table in the appendix}
+    \label{tab:apxt1}
+\end{table}
+\kant[3]
+
+\end{appendices}
+
+\end{document}

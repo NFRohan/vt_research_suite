@@ -139,7 +139,7 @@ def fig_compute_overuse():
     rows = [("ResNet-18", "Clean", 2.393, 3.579), ("VGG16", "Clean", 3.533, 4.702),
             ("MobileNetV2", "Clean", 6.556, 7.707), ("ResNet-18", "Adv.", 5.130, 5.404),
             ("VGG16", "Adv.", 6.272, 6.311), ("MobileNetV2", "Adv.", 7.208, 7.262)]
-    fig, ax = plt.subplots(figsize=(8.2, 3.9))
+    fig, ax = plt.subplots(figsize=(8.2, 4.2))
     for i, (bb, reg, c, a) in enumerate(rows):
         ax.plot([c, a], [i, i], "-", color="0.6", lw=2, zorder=1)
         ax.scatter([c], [i], s=70, color=CFIX, zorder=3, label="clean input" if i == 0 else None)
@@ -150,9 +150,10 @@ def fig_compute_overuse():
     ax.set_yticklabels([r[0] + " / " + r[1] for r in rows], fontsize=9)
     ax.invert_yaxis(); ax.set_xlabel("Average stopping depth (timesteps)")
     ax.set_xlim(2, 8.6); ax.grid(axis="x", alpha=0.25, lw=0.6)
-    ax.legend(fontsize=8, loc="upper left", framealpha=0.95)
+    ax.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.16),
+              ncol=2, frameon=False)
     ax.set_title("Compute-overuse attack inflates inference depth (label preserved)", fontsize=11)
-    fig.tight_layout()
+    fig.tight_layout(rect=[0, 0.04, 1, 1])
     fig.savefig(os.path.join(OUT, "compute_overuse.png"), dpi=200)
     plt.close(fig)
     print("wrote compute_overuse.png")

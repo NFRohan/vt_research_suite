@@ -1,0 +1,136 @@
+\documentclass{iutbscthesis}
+
+% ---------------------------------------------------------------- extra packages
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, calc, shapes.geometric, backgrounds}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage[skins,breakable]{tcolorbox}
+\usepackage{enumitem}
+\setlist{itemsep=2pt, topsep=4pt}
+
+\definecolor{cfix}{HTML}{36649E}
+\definecolor{cvt}{HTML}{CE7B1A}
+\definecolor{catk}{HTML}{B22D2D}
+\definecolor{boxbg}{HTML}{F4F6FA}
+
+\newtcolorbox{keybox}[1][]{colback=boxbg, colframe=cfix, boxrule=0.6pt, arc=2pt,
+  left=6pt, right=6pt, top=4pt, bottom=4pt, fonttitle=\bfseries, #1}
+
+\newcommand{\VT}{\mathrm{VT}}
+\newcommand{\SynOps}{\mathrm{SynOps}}
+\newcommand{\pts}{\,pts}
+\newcommand{\figref}[1]{Figure~\ref{#1}}
+\newcommand{\tabref}[1]{Table~\ref{#1}}
+\newcommand{\secref}[1]{Section~\ref{#1}}
+\newcommand{\chapref}[1]{Chapter~\ref{#1}}
+\newcommand{\eqnref}[1]{Equation~\eqref{#1}}
+\providecommand{\algref}{}
+\renewcommand{\algref}[1]{Algorithm~\ref{#1}}
+
+\graphicspath{{figures/}}
+
+% Let floats share pages with text more readily
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.6}
+\renewcommand{\textfraction}{0.12}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
+\addbibresource{citations.bib}
+
+% ---------------------------------------------------------------- metadata
+\title{Variable Timing in Spiking Neural Networks: Efficiency Gains and the Attack Surface They Create}
+
+\addauthor{MD. Ifti Akkas}{210041111}
+\addauthor{Ahsanul Amin Anik}{210041126}
+\addauthor{Nayeem Fardin Rohan}{210041141}
+
+\supervisor{Mohammad Ishrak Abedin}{Lecturer}{Department of Computer Science and Engineering}
+\addcosupervisor{Aashnan Rahman}{Junior Lecturer}{Department of Computer Science and Engineering}
+
+\department{Department of Computer Science and Engineering}
+\program{Bachelor of Science in Computer Science and Engineering}
+\defensedate{18}{September}{2026}
+
+\begin{document}
+
+\coverpage
+\pagenumbering{roman}
+\titlepage
+\declarationofcandidate
+
+% TODO: personalise the dedication.
+\dedicatedto{our families, for their patience through every late night of this work}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\clearpage
+\begin{abbreviations}
+    \abbr{AA}{AutoAttack}
+    \abbr{ACT}{Adaptive Computation Time}
+    \abbr{AMP}{Automatic Mixed Precision}
+    \abbr{ANN}{Artificial Neural Network}
+    \abbr{APGD}{Auto-Projected Gradient Descent}
+    \abbr{BN}{Batch Normalisation}
+    \abbr{BPTT}{Backpropagation Through Time}
+    \abbr{CE}{Cross-Entropy}
+    \abbr{CI}{Confidence Interval}
+    \abbr{EoT}{Expectation over Transformation}
+    \abbr{FAB}{Fast Adaptive Boundary attack}
+    \abbr{FGSM}{Fast Gradient Sign Method}
+    \abbr{LIF}{Leaky Integrate-and-Fire}
+    \abbr{MAC}{Multiply--Accumulate operation}
+    \abbr{MSP}{Maximum Softmax Probability}
+    \abbr{PGD}{Projected Gradient Descent}
+    \abbr{RFGSM}{FGSM with Random Initialisation}
+    \abbr{RQ}{Research Question}
+    \abbr{SGD}{Stochastic Gradient Descent}
+    \abbr{SNN}{Spiking Neural Network}
+    \abbr{SynOps}{Synaptic Operations}
+    \abbr{VT}{Variable Timing}
+\end{abbreviations}
+
+% TODO: personalise the acknowledgement.
+\begin{acknowledgement}
+We are deeply grateful to our supervisor, Mohammad Ishrak Abedin, and our co-supervisor, Aashnan Rahman, for their guidance throughout this thesis. Their insistence that every claim be backed by a controlled comparison shaped the methodology of this work more than any other single influence, and their patience when results refused to behave as expected kept the project moving.
+
+We thank the faculty members of the Department of Computer Science and Engineering at the Islamic University of Technology for the education that made this work possible, and the members of our pre-defence and defence committees, whose questions sharpened both the experiments and the way we report them.
+
+We acknowledge the authors of the open-source software on which this work rests, in particular the BrainCog / RandHet-SNN code base from which our experimental suite descends, PyTorch, and the AutoAttack and torchattacks libraries. We also thank Kaggle for the GPU time that made multi-seed adversarial training feasible for an undergraduate project.
+
+Finally, we thank our families and friends for their support and understanding throughout.
+\end{acknowledgement}
+
+\begin{abstract}
+Spiking neural networks (SNNs) process an input over several discrete timesteps, so their inference cost grows with the number of timesteps they are allowed to run. \emph{Variable timing} (VT) lets each input stop as soon as the network's accumulated prediction is confident enough, promising lower average compute at little cost in accuracy. Two questions are usually left open: whether the reported savings survive a fair comparison against a fixed-horizon SNN that uses the same compute, and what the confidence-gated stopping rule does to the network's behaviour under attack.
+
+This thesis studies both questions on CIFAR-10 with directly trained, deterministic leaky integrate-and-fire SNNs built on ResNet-18, VGG16 and MobileNetV2 backbones, trained either on clean data or entirely on adversarial examples, with a fixed eight-step or a mixed one-to-eight-step training schedule. Every VT operating point is compared with the fixed-timestep model that matches its measured synaptic operations, and thresholds are chosen by a selection rule that does not favour VT.
+
+At equal compute, VT is more accurate than fixed-timestep inference on all nine configurations, by $+0.14$ to $+3.37$ percentage points, and the clean-data advantage replicates across three independent training seeds for each of two adversarially trained backbones ($+2.47 \pm 0.99$ points, $t(5) = 6.11$, $p = 0.002$). Under attack, the picture separates by attack strength. Against PGD-20, VT appears to be as robust as the full eight-step model. Against AutoAttack, VT is consistently \emph{less} robust than the full-horizon model ($-4.05 \pm 2.88$ points, 0 of 6 seeds positive, $p = 0.018$), yet indistinguishable from the compute-matched fixed-timestep model ($+0.35 \pm 4.33$, $p = 0.85$): the robustness VT gives up is the robustness that the skipped timesteps would have provided. We also introduce a label-preserving compute-overuse attack that targets the exit gate itself: it raises the average exit depth of clean-trained, fixed-schedule VT models by more than one full timestep while leaving most predictions correct, an energy-latency attack surface that fixed-horizon inference does not have. Adversarial training almost entirely removes it.
+
+Operating points are selected with a VT-neutral rule, because maximising the gain over the matched baseline can select degenerate thresholds far below full-horizon accuracy. The results argue that VT should be reported as a compute-accuracy trade-off with an explicit attack model, evaluated with strong attacks, matched controls and multiple seeds.
+\end{abstract}
+
+\pagenumbering{arabic}
+
+\input{chapters/01_introduction}
+\input{chapters/02_related_works}
+\input{chapters/03_methodology}
+\input{chapters/04_results}
+\input{chapters/05_conclusion}
+
+\printbib
+
+\begin{appendices}
+\input{chapters/appendix}
+\end{appendices}
+
+\end{document}

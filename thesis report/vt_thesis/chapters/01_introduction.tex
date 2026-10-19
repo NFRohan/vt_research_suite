@@ -1,0 +1,143 @@
+\chapter{Introduction}
+\label{ch:intro}
+
+Deep neural networks have become the default tool for perception tasks, but their cost has grown with them. A modern image classifier performs billions of multiply--accumulate operations per input, and the energy those operations consume is now a first-order concern both in data centres and on battery-powered devices~\cite{horowitz2014computing}. \emph{Spiking neural networks} (SNNs) are one of the most studied responses to this problem. Instead of passing real-valued activations between layers once, an SNN passes binary \emph{spikes} over a number of discrete timesteps, and a synaptic operation is performed only when a spike actually arrives~\cite{maass1997networks, roy2019towards}. On neuromorphic hardware such as TrueNorth and Loihi~\cite{merolla2014million, davies2018loihi}, that sparsity translates directly into energy savings.
+
+The same mechanism that makes SNNs efficient also creates a knob that conventional networks do not have: the number of timesteps. Running an SNN for more timesteps lets its neurons integrate more evidence and usually improves accuracy, but every extra timestep costs another pass of synaptic activity. Most SNNs fix this number in advance for every input. \emph{Variable timing} (VT), also called dynamic timesteps or delay-adaptive inference, removes that restriction: the network keeps a running prediction, and each input stops as soon as that prediction is confident enough~\cite{li2023unleashing, li2023input, chen2025knowing}. Easy inputs exit after a few timesteps, hard inputs use the full budget, and the average cost falls.
+
+This thesis is about what VT really buys and what it costs. It asks whether the efficiency gain survives a fair, compute-matched comparison, and what a confidence-gated stopping rule does to an SNN when an adversary is present. The answers turn out to be more nuanced than either the efficiency literature or the robustness literature, read on their own, would suggest.
+
+\section{Background}
+\label{sec:intro-background}
+
+\subsection{Spiking neural networks and the timestep budget}
+
+The basic unit of most practical SNNs is the leaky integrate-and-fire (LIF) neuron~\cite{gerstner2014neuronal}. At each timestep the neuron adds its weighted input current to a membrane potential that slowly leaks towards zero. When the potential crosses a threshold, the neuron emits a spike and its potential is reset. A network of LIF neurons therefore turns a static input into a spatio-temporal pattern of spikes, and the network's prediction is read out by accumulating the output layer's activity over the timesteps that were run.
+
+Training such networks directly was long considered impractical because the spike function has no useful gradient. Surrogate-gradient methods~\cite{neftci2019surrogate, wu2018spatio} replace that gradient with a smooth approximation during backpropagation through time, and together with normalisation schemes such as threshold-dependent batch normalisation~\cite{zheng2021going} and residual designs such as SEW-ResNet~\cite{fang2021deep} they now let deep SNNs be trained end-to-end on standard vision benchmarks with a handful of timesteps. The alternative route, converting a trained artificial network into an SNN~\cite{rueckauer2017conversion}, typically needs many more timesteps to reach the same accuracy.
+
+In both cases the number of timesteps $T$ sits at the centre of the efficiency story. Synaptic operations, the additions triggered by incoming spikes, grow roughly linearly with $T$, and so does latency. Whether an SNN is actually more energy-efficient than an equivalent artificial network depends heavily on how many timesteps it needs and how sparse its activity is~\cite{dampfhoffer2023snns, sorbaro2020optimizing}. Reducing the average number of timesteps is therefore one of the most direct ways to make SNNs cheaper.
+
+\subsection{Variable timing}
+
+Variable timing applies the idea of early-exit networks~\cite{teerapittayanon2016branchynet, huang2018multi, kaya2019shallow, laskaridis2021adaptive} along the time axis rather than the depth axis. Because an SNN already produces a prediction after every timestep, no extra classifier heads are needed: after timestep $t$ the network computes a confidence score from its accumulated output, and if the score exceeds a threshold $\theta$ the input exits with that prediction. Lower thresholds exit earlier and save more compute, while higher thresholds behave more like a fixed-horizon network. Sweeping $\theta$ traces out a curve of accuracy against average compute.
+
+Several recent works report that this simple mechanism recovers most of the accuracy of a long fixed horizon at a fraction of the cost~\cite{li2023unleashing, li2023input}, and others add statistical guarantees on the reliability of the stopping decision~\cite{chen2025knowing} or adapt it to medical imaging~\cite{rao2025vtsnn}.
+
+\subsection{Adversarial robustness of SNNs}
+
+Neural networks are vulnerable to \emph{adversarial examples}: inputs changed by a small, carefully chosen perturbation that flips the prediction~\cite{szegedy2014intriguing, goodfellow2015explaining}. The standard defence is adversarial training, in which the model is trained on such perturbed inputs~\cite{madry2018towards}. SNNs were initially reported to be more robust than artificial networks~\cite{sharmin2019comprehensive, sharmin2020inherent}, but much of that apparent robustness came from the difficulty of computing gradients through spikes rather than from genuine resistance, and later work has shown that SNN robustness must be measured with attacks that are adapted to their non-differentiable dynamics~\cite{liang2022toward, wang2026towards}. The adversarial-machine-learning community has learnt the same lesson repeatedly: weak attacks and gradient masking produce robustness numbers that do not survive a stronger evaluation~\cite{athalye2018obfuscated, tramer2020adaptive, croce2020reliable}.
+
+\section{Motivation}
+\label{sec:intro-motivation}
+
+VT and robustness have so far been studied largely in isolation. The efficiency literature evaluates VT on clean data, and the SNN robustness literature evaluates fixed-horizon networks. Putting the two together raises questions that neither literature answers on its own.
+
+\paragraph{Is the comparison fair?} VT is usually shown as a curve of accuracy against average timesteps, next to the accuracy of a fixed-horizon network at its full budget. That comparison mixes two effects: VT spends less compute, and it chooses \emph{where} to spend it. The fair question is whether VT beats a fixed-horizon network that uses the \emph{same} compute. Without that compute-matched control, an efficiency claim cannot be separated from the trivial observation that running fewer timesteps is cheaper.
+
+\paragraph{Does early exit change robustness?} If an adversary can make an input exit early with a wrong but confident prediction, VT might be easier to attack than a fixed-horizon network. Conversely, if robust features take several timesteps to build up, the robustness of a VT model might simply track how many timesteps it ends up running. Which of these dominates, and whether the answer depends on how the network was trained, is not known.
+
+\paragraph{Does the gate create a new attack surface?} An input-dependent exit means that compute itself becomes input-dependent. Work on multi-exit artificial networks has shown that adversaries can craft inputs that defeat early exits and force maximum computation~\cite{haque2020ilfo, hong2021panda}, a family of attacks closely related to sponge examples~\cite{shumailov2021sponge}. For an SNN whose selling point is energy efficiency, an attack that silently removes that efficiency is a security problem in its own right.
+
+\paragraph{Are the conclusions reliable?} Each of these comparisons depends on choices that can change the conclusion: how the threshold is selected, which attack is used and how many training seeds are run. Deep learning results are known to be sensitive to random seeds and evaluation protocol~\cite{henderson2018deep, bouthillier2021accounting, picard2021torch}, and adversarial robustness results to the strength of the attack~\cite{carlini2019evaluating, croce2021robustbench}. A study of VT under attack is only useful if its conclusions survive these sensitivities.
+
+\section{Problem Statement}
+\label{sec:intro-problem}
+
+Variable timing promises to reduce the inference cost of spiking neural networks by letting each input stop when the network is confident. Existing evaluations compare VT with fixed-horizon SNNs at unequal compute, choose operating points in ways that can favour VT, and measure accuracy only on clean data. As a result it is not known (i)~whether VT is more accurate than a fixed-horizon SNN that uses the same compute, (ii)~how the confidence gate changes adversarial robustness and whether it opens new compute-targeting attacks, and (iii)~whether these conclusions hold across architectures, training regimes, training seeds, attack strengths and operating-point selection rules.
+
+
+\section{Research Questions}
+\label{sec:intro-rqs}
+
+The thesis is organised around four research questions.
+
+\begin{description}[leftmargin=1.2cm, style=nextline]
+    \item[RQ1 (Efficiency)] At equal measured compute, is a VT SNN more accurate than a fixed-timestep SNN, and does the answer hold across backbones, training regimes, training schedules and training seeds?
+    \item[RQ2 (Robustness)] How does VT change adversarial robustness relative to (a)~the same network run for its full horizon and (b)~the compute-matched fixed-timestep network, and does the answer depend on the strength of the attack?
+    \item[RQ3 (Attack surface)] Does the confidence gate create attack objectives that fixed-horizon inference does not have, in particular attacks that inflate compute while preserving the label, and how does the training regime affect them?
+    \item[RQ4 (Evaluation reliability)] How sensitive are the answers to RQ1--RQ3 to the operating-point selection rule, the attack used, and run-to-run variance?
+\end{description}
+
+\section{Objectives}
+\label{sec:intro-objectives}
+
+To answer these questions, the thesis sets the following objectives.
+
+\begin{enumerate}[label=\textbf{O\arabic*.}, leftmargin=1.2cm]
+    \item Build a reproducible evaluation suite in which every VT operating point is compared with the fixed-timestep network that matches its measured synaptic operations, with sample-exact compute accounting.
+    \item Train deterministic LIF SNNs on three backbones (ResNet-18, VGG16, MobileNetV2) under two training regimes (fully clean, fully adversarial) and two timestep schedules (fixed eight-step, mixed one-to-eight-step), and measure VT's compute--accuracy frontier on each.
+    \item Evaluate robustness of fixed-horizon, compute-matched and VT inference under PGD-20 and AutoAttack, with the attacker differentiating through the exit gate.
+    \item Implement and evaluate two gate-specific attacks: a \emph{wrong-early-exit} attack and a label-preserving \emph{compute-overuse} attack.
+    \item Quantify the reliability of the conclusions through a VT-neutral operating-point selection rule, a tolerance sensitivity analysis, alternative stopping rules, and replication across three training seeds with paired statistical tests.
+\end{enumerate}
+
+\section{Research Challenges}
+\label{sec:intro-challenges}
+
+Several practical difficulties shaped the design of this study.
+
+\paragraph{Measuring compute fairly.} The cost of a VT model depends on which inputs exit when. Measuring it with batch-level averages over-counts compute, because the slowest input in a batch keeps the whole batch running. We therefore implemented sample-exact accounting, in which each input's synaptic operations are counted only up to its own exit step (\secref{sec:meth-synops}).
+
+\paragraph{Attacking a non-differentiable gate.} The exit decision is a hard threshold, so gradients do not flow through it. An attacker who ignores the gate may under-estimate VT's vulnerability, and one who differentiates only through the full-horizon output attacks a different model. We follow the adaptive-attack principle~\cite{tramer2020adaptive} and give the attacker the full trace of per-timestep logits, with the loss computed at each input's actual exit step (\secref{sec:meth-attacks}).
+
+\paragraph{Compute constraints.} Adversarial training of SNNs is expensive: every training step requires a full multi-timestep forward and backward pass to generate the perturbation and another to update the weights. All experiments were run on Kaggle GPUs under session time limits, which bounded the number of training seeds we could afford (three per adversarially trained backbone) and forced AutoAttack to be run on a 2{,}000-image class-balanced subset of the test set. One MobileNetV2 multi-seed run exceeded the 12-hour session limit and produced only partial results.
+
+\paragraph{Selection bias.} Every VT result is reported at some threshold, and the threshold must be chosen. We found that the natural choice, the threshold with the largest gain over its compute-matched control, can select operating points that are far below the full-horizon accuracy, and reported gains that are artefacts of comparing two poor models (\secref{sec:res-selection}). Avoiding this required a selection rule that does not reward VT for the comparison it is being tested on.
+
+\paragraph{Variance.} Our first adversarially trained ResNet-18 and a later re-run with identical settings differed by 3.5 points in full-horizon accuracy and by a factor of two in VT's gain. Single-run results were therefore not enough, and the robustness conclusions in particular had to be re-examined with multiple training seeds.
+
+\section{Contributions}
+\label{sec:intro-contrib}
+
+The main contributions of this thesis are:
+
+\begin{enumerate}[label=\textbf{C\arabic*.}, leftmargin=1.2cm]
+    \item \textbf{A compute-matched evaluation protocol for VT.} We compare every VT operating point with the fixed-timestep model of nearest measured synaptic operations, using sample-exact compute accounting, and select operating points on a held-out calibration split with a VT-neutral rule that does not reward VT for the comparison being made.
+    \item \textbf{A label-preserving compute-overuse attack on VT SNNs.} We adapt slowdown attacks on multi-exit networks to the time axis of SNNs: an attacker who differentiates through the full trace of per-timestep outputs suppresses the exit confidence while preserving the correct label. It raises the mean exit depth of clean-trained fixed-schedule VT models by $1.15$--$1.19$ timesteps with predictions left largely intact, an energy-latency attack surface that fixed-horizon inference does not have. Adversarial training reduces the inflation to $0.04$--$0.37$ timesteps.
+    \item \textbf{Evidence that VT's clean efficiency gain is real.} At equal compute, VT is more accurate than fixed-timestep inference on all nine model configurations we trained (gains of $+0.14$ to $+3.37$ points), and the gain replicates across three training seeds for two adversarially trained backbones ($+2.47 \pm 0.99$ points, $p = 0.002$).
+    \item \textbf{A decomposition of VT's robustness cost.} Under AutoAttack, VT is consistently less robust than the full-horizon model ($-4.05$ points, 0 of 6 seeds positive) but indistinguishable from the compute-matched model ($+0.35$ points, $p = 0.85$). The robustness VT loses is the robustness its skipped timesteps would have provided. PGD-20 hides this cost entirely.
+    \item \textbf{An open, reproducible suite} of Kaggle-ready notebooks, raw result files and analysis scripts from which every number in this thesis is regenerated.
+\end{enumerate}
+
+\tabref{tab:contrib-map} maps the contributions to the research questions and to the chapters in which they are developed.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Mapping of contributions to research questions, objectives and chapters.}
+    \label{tab:contrib-map}
+    \small
+    \begin{tabular}{@{}l l l l@{}}
+        \toprule
+        Contribution & Research question & Objectives & Where \\
+        \midrule
+        C1 Compute-matched protocol      & RQ1, RQ4 & O1, O5 & \secref{sec:meth-protocol}, \secref{sec:meth-selection} \\
+        C2 Compute-overuse attack        & RQ3      & O4     & \secref{sec:meth-attacks}, \secref{sec:res-gate} \\
+        C3 Clean efficiency gain         & RQ1      & O2     & \secref{sec:res-efficiency}, \secref{sec:res-multiseed} \\
+        C4 Robustness decomposition      & RQ2      & O3     & \secref{sec:res-robustness}, \secref{sec:res-multiseed} \\
+        C5 Reproducible suite            & ---      & O1     & \secref{sec:meth-impl}, Appendix~\ref{app:repro} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Scope and Delimitations}
+\label{sec:intro-scope}
+
+To keep the study controlled, we deliberately limit its scope.
+
+\begin{itemize}
+    \item \textbf{Dataset.} All experiments use CIFAR-10~\cite{krizhevsky2009learning}. Static images with direct encoding are the setting in which most VT results have been reported. Neuromorphic event datasets are left for future work.
+    \item \textbf{Neuron model.} We use deterministic LIF neurons with a fixed threshold and leak. Stochastic or heterogeneous neurons, which have been proposed as robustness mechanisms in their own right~\cite{wang2025random}, are excluded so that any robustness effect can be attributed to VT rather than to randomness.
+    \item \textbf{Threat model.} We consider white-box $\ell_\infty$ attacks with $\epsilon = 8/255$ on the input image. Physical-world attacks, hardware fault injection and attacks on the neuromorphic substrate are outside scope.
+    \item \textbf{Compute metric.} We measure synaptic operations (SynOps), a hardware-independent proxy for energy. We do not measure energy on neuromorphic hardware, since the relationship between SynOps and joules depends on the platform~\cite{dampfhoffer2023snns}.
+    \item \textbf{Horizon.} The maximum horizon is $T = 8$ timesteps throughout, a common choice for directly trained SNNs on CIFAR-10.
+\end{itemize}
+
+\section{Thesis Organisation}
+\label{sec:intro-org}
+
+The rest of the thesis is organised as follows. \chapref{ch:related} reviews work on SNN training and efficiency, adaptive and early-exit inference, adversarial robustness of SNNs, attacks on adaptive inference, and evaluation methodology, and positions this thesis against it. \chapref{ch:method} formalises VT, describes the models, training regimes, compute accounting, operating-point selection, attacks and statistical tests, and documents the implementation. \chapref{ch:results} presents the experiments: the compute-matched efficiency comparison, the effect of the selection rule, the robustness comparison, the gate-specific attacks, the multi-seed replication and the threats to validity. \chapref{ch:conclusion} answers the research questions, discusses implications and limitations, and outlines future work. The appendices contain full result tables, hyperparameters and reproducibility instructions.
+
+\section{Summary}
+
+Variable timing lets an SNN spend less compute on easy inputs. This thesis asks whether that saving is real when compared fairly, what it does to adversarial robustness, and whether the exit gate can itself be attacked. The next chapter situates these questions in the literature.

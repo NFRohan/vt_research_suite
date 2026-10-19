@@ -1,0 +1,104 @@
+\chapter{Conclusion}
+\label{ch:conclusion}
+
+This chapter closes the thesis. \secref{sec:con-restate} restates the problem, \secref{sec:con-rqs} answers the research questions, and \secref{sec:con-objectives} revisits the objectives. \secref{sec:con-contrib} summarises the contributions and \secref{sec:con-implications} their implications. \secref{sec:con-limitations} states the limitations, \secref{sec:con-future} outlines future work, and \secref{sec:con-remarks} offers concluding remarks.
+
+\section{Restatement of the Problem}
+\label{sec:con-restate}
+
+Spiking neural networks process each input over several timesteps, and their cost grows with every timestep they run. Variable timing lets each input stop as soon as the network's accumulated prediction is confident, promising lower average cost at little loss in accuracy. Before this thesis, it was not known whether that promise survives a comparison against a fixed-horizon SNN of equal compute, how a confidence-gated exit changes adversarial robustness and whether it can itself be attacked, or whether such conclusions survive changes in operating-point selection, attack strength and training seed. We studied these questions with deterministic LIF SNNs on CIFAR-10, across three backbones, two training regimes and two timestep schedules, under a compute-matched protocol with a VT-neutral selection rule, strong and gate-specific attacks, and a multi-seed replication.
+
+\section{Answers to the Research Questions}
+\label{sec:con-rqs}
+
+\tabref{tab:con-answers} summarises the answers, and the paragraphs below expand on them.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Summary of the answers to the research questions.}
+    \label{tab:con-answers}
+    \small
+    \begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.6cm}@{}}
+        \toprule
+        RQ & Answer & Key evidence \\
+        \midrule
+        RQ1 Efficiency & Yes. At equal compute, VT is more accurate than fixed-timestep inference on all nine configurations; the gain replicates across seeds. It is large for fixed-T8-trained models and small for mixed-T-trained ones. & \tabref{tab:res-neutral}; \tabref{tab:res-pooled}: $+2.47 \pm 0.99$, $p = 0.002$ \\
+        \addlinespace
+        RQ2 Robustness & At equal compute, VT is as robust as a fixed horizon. Relative to the full horizon, it loses AutoAttack robustness in proportion to the timesteps it skips. PGD-20 hides this cost. & \tabref{tab:res-pooled}: $+0.35$ ($p = 0.85$) vs matched; $-4.05$ ($p = 0.018$, 0/6) vs full \\
+        \addlinespace
+        RQ3 Attack surface & The gate does not ease misclassification but makes compute attackable: a label-preserving attack inflates exit depth by over one timestep on clean-trained models; adversarial training largely removes this. & \tabref{tab:res-wrong-exit}; \tabref{tab:res-overuse} \\
+        \addlinespace
+        RQ4 Reliability & Efficiency conclusions are robust in sign but not in magnitude; max-gain selection can inflate gains up to $+18$ points at useless operating points; single-run robustness comparisons did not replicate. & \tabref{tab:res-selection}; \tabref{tab:res-delta}; \secref{sec:res-threats} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\paragraph{RQ1: Is VT more accurate than a fixed horizon at equal compute?} Yes. At the VT-neutral operating points, VT beats its compute-matched fixed horizon on all nine configurations, by $+0.14$ to $+3.37$ points. On clean-trained fixed-T8 ResNet-18 and VGG16 the gains are clear ($+2.73$ and $+3.12$) and come with 68\% and 59\% SynOps savings relative to the full horizon at less than one point of accuracy loss. On adversarially trained models the single-run gains are smaller and variable, but the three-seed replication on ResNet-18 and VGG16 confirms them: $+2.47 \pm 0.99$ points pooled, positive on all six checkpoints. The gain shrinks to $+0.14$ (clean) and $+0.68$ (adversarial) when the network is trained with a mixed-T schedule, because the mixed-T fixed-horizon baseline is stronger at short horizons or the mixed-T confidence signal is less informative. VT's advantage is therefore real, but it is largest against fixed-horizon models that were never trained for short horizons.
+
+\paragraph{RQ2: How does VT change robustness?} Clean-trained models collapse under attack regardless of inference mode. For adversarially trained models, the answer depends on the reference and the attack. Against the compute-matched fixed horizon, VT shows no detectable robustness difference under either PGD-20 ($+0.23$) or AutoAttack ($+0.35$). Against the full horizon, VT is indistinguishable under PGD-20 ($+0.17$) but consistently less robust under AutoAttack ($-4.05$, 0 of 6 checkpoints positive, $p = 0.018$). The matched horizon loses a similar 4.4 points relative to the full horizon. VT's robustness cost is therefore a compute cost: robustness of adversarially trained SNNs accumulates over timesteps, and VT runs fewer of them. Because the PGD--AutoAttack gap of these models (8--35 points) is larger than the cost, a PGD-only evaluation would wrongly conclude that VT is free.
+
+\paragraph{RQ3: Does the exit gate create new attacks?} Partially. A wrong-early-exit attack designed to force confident wrong exits was not stronger than standard PGD on any adversarially trained model. On clean-trained models, ordinary PGD already causes wrong exits at the earliest informative timestep. A label-preserving compute-overuse attack, however, raised the mean exit depth of clean-trained fixed-T8 models by 1.15--1.19 timesteps while keeping 61--97\% of predictions correct, an energy-latency attack that fixed-horizon inference does not admit. Adversarial training reduced the inflation to 0.04--0.37 timesteps (2--10\% of the available headroom), except for the mixed-T model (0.65 timesteps).
+
+\paragraph{RQ4: How reliable are these conclusions?} The sign of the clean efficiency gain is robust to the tolerance of the VT-neutral rule (25 of 27 settings positive) and to the stopping rule (all softmax-based rules beat the fixed horizon), but its magnitude moves by one to three points with the discrete choice of threshold and matched horizon. The max-gain selection rule used in our original experiments, and natural in the literature, inflated the gain on six of nine configurations and on two selected operating points 31 and 49 points below the full horizon. Robustness comparisons were the least reliable: two identical training runs differed by a factor of two in VT gain, and an early single-run result showing a 23-point AutoAttack deficit of VT relative to its matched control did not replicate. Only the comparisons tested across seeds should be regarded as established.
+
+\section{Objectives Revisited}
+\label{sec:con-objectives}
+
+\begin{itemize}
+    \item \textbf{O1 (compute-matched suite)} was achieved: every VT point is paired with the fixed horizon of nearest sample-exact SynOps, on separate calibration and test splits (\secref{sec:meth-protocol}).
+    \item \textbf{O2 (models and frontiers)} was achieved for nine configurations: three backbones in both regimes with the fixed-T8 schedule, plus both regimes with the mixed-T schedule on ResNet-18 (\secref{sec:res-efficiency}). The mixed-T schedule was not extended to VGG16 and MobileNetV2.
+    \item \textbf{O3 (robustness)} was achieved with PGD-20 and AutoAttack through the exit-step logits, for all configurations except the withheld run-1 ResNet-18 measurement (\secref{sec:res-robustness}).
+    \item \textbf{O4 (gate attacks)} was achieved: wrong-early-exit and compute-overuse attacks were run on every configuration (\secref{sec:res-gate}).
+    \item \textbf{O5 (reliability)} was achieved through the VT-neutral rule, the tolerance and stopping-rule analyses, and the three-seed replication on two backbones (\secref{sec:res-selection}, \secref{sec:res-multiseed}). The MobileNetV2 replication did not complete.
+\end{itemize}
+
+\section{Summary of Contributions}
+\label{sec:con-contrib}
+
+\begin{enumerate}[label=\textbf{C\arabic*.}, leftmargin=1.2cm]
+    \item A compute-matched evaluation protocol for variable timing with sample-exact SynOps accounting and VT-neutral, calibration-split operating-point selection.
+    \item A label-preserving compute-overuse attack that turns the exit gate of VT SNNs into an energy-latency attack surface, and evidence that adversarial training largely mitigates it.
+    \item Replicated evidence that VT's clean efficiency gain over a compute-matched fixed horizon is real, and evidence that it depends on the training schedule.
+    \item A decomposition of VT's robustness cost: equal robustness at equal compute, a consistent AutoAttack deficit relative to the full horizon, and a demonstration that PGD-20 hides it.
+    \item A reproducible suite of notebooks, raw results and analysis scripts.
+\end{enumerate}
+
+\section{Implications}
+\label{sec:con-implications}
+
+\paragraph{For practitioners.} VT is worth using when compute matters and inputs vary in difficulty: it gives a better accuracy for a given average budget than a fixed horizon. But a VT deployment should be treated as having an \emph{input-dependent} cost. If the cost budget is a hard constraint, it needs a cap, because an adversary can raise it. If robustness matters, the relevant comparison is with the full horizon, and VT gives up a few points of worst-case robustness in exchange for its savings. A deployment that cannot afford that should run the full horizon on suspicious inputs or use VT only on clean, trusted data.
+
+\paragraph{For researchers evaluating efficiency methods.} The protocol matters as much as the method. Comparing with the full horizon conflates choosing when to stop with simply stopping earlier. Selecting the operating point by the gain one is trying to measure inflates it, and comparing with a fixed-horizon model trained only at the full horizon flatters any early-exit method. The recommendations in \secref{sec:res-discussion} apply beyond VT to any adaptive-compute method for SNNs.
+
+\paragraph{For researchers evaluating SNN robustness.} The large PGD--AutoAttack gaps we observed add to the evidence that SNN robustness is easily over-estimated~\cite{wang2026towards}. They also show that the over-estimate can hide relative effects, not just absolute levels: a comparison between two inference modes can come out tied under PGD and clearly different under AutoAttack.
+
+\section{Limitations}
+\label{sec:con-limitations}
+
+\begin{itemize}
+    \item \textbf{Single dataset and horizon.} All results are on CIFAR-10 with $T_{\max} = 8$ and direct encoding.
+    \item \textbf{Limited replication.} The multi-seed study covers adversarially trained fixed-T8 ResNet-18 and VGG16 with three seeds each. Clean-trained, mixed-T and MobileNetV2 results rest on single runs, and six checkpoints give limited power to detect small effects.
+    \item \textbf{Selection rule for attacks and multi-seed runs.} Attacks and the multi-seed study used max-gain operating points, and the VT-neutral re-selection could be applied only to the clean-data sweeps.
+    \item \textbf{Withheld measurement.} The full-test attack results of the first adversarially trained ResNet-18 were inconsistent and are excluded.
+    \item \textbf{Compute proxy.} SynOps does not include memory or control costs, and no measurement on neuromorphic hardware was made.
+    \item \textbf{Attack coverage.} SNN-specific adaptive attacks and EoT-based attacks on stochastic models were outside scope, and the gate-specific attacks are our own designs and may not be optimal.
+    \item \textbf{One VT design.} We studied threshold-based exit with a maximum-softmax score (and four alternatives at matched depth). Learned halting policies, conformal stopping~\cite{chen2025knowing} and training objectives designed for early exit were not studied.
+\end{itemize}
+
+\section{Future Work}
+\label{sec:con-future}
+
+\paragraph{Complete the replication.} The most direct extension is to replicate the clean-trained and mixed-T configurations across seeds, complete the MobileNetV2 multi-seed run, and re-run the attacks at VT-neutral operating points.
+
+\paragraph{Robust stopping rules.} The compute-overuse vulnerability arises because the exit decision depends only on an output-derived confidence that an adversary can lower. Stopping rules whose decisions are robust to small input perturbations, for example certified-confidence or conformal stopping rules~\cite{chen2025knowing} or confidence scores computed on adversarially smoothed inputs, could make the gate harder to manipulate. A simple alternative is a learned or calibrated cap on per-input compute.
+
+\paragraph{Training for robust early exit.} Our results suggest that robustness accumulates over timesteps. A training objective that rewards robustness at every timestep, in the spirit of temporal efficient training~\cite{deng2022temporal} but with adversarial inputs, might let VT exit early without paying the robustness cost. The mixed-T schedule is a first step in this direction, and its interaction with compute-overuse vulnerability deserves further study.
+
+\paragraph{Hardware and event data.} Measuring actual energy on neuromorphic hardware, where per-sample early exit may interact with batching and pipelining, would test whether SynOps savings and compute-overuse inflation translate into joules. Event-based datasets with genuine temporal structure, where later timesteps carry new information rather than repeated input, may change both the efficiency gain and the robustness cost.
+
+\paragraph{Stronger attacks.} SNN-specific adaptive attacks~\cite{wang2026towards} should be applied to VT models, both to tighten the robustness estimates and to design stronger wrong-early-exit and compute-overuse attacks.
+
+\section{Concluding Remarks}
+\label{sec:con-remarks}
+
+When we started this work, we expected either to show that variable timing makes spiking networks cheaper at no cost, or to show that it makes them dangerously fragile. The truth is less dramatic and more useful. VT is a genuinely better way to spend a fixed compute budget on clean data. Under attack it is exactly as good as the compute it spends, no better and no worse. Because it spends less, it is less robust than running the full horizon. Its exit gate does not make networks easier to fool, but it does make their energy consumption something an adversary can raise. None of these conclusions would have been visible without compute-matched controls, a selection rule that does not favour the method under test, a strong attack, and more than one training seed. If this thesis has a single lesson beyond its specific findings, it is that the evaluation protocol is part of the result.

@@ -1,0 +1,152 @@
+\chapter{Related Works}
+\label{ch:related}
+
+This chapter reviews the five bodies of work on which the thesis draws. \secref{sec:rw-snn} covers spiking neural networks: neuron models, training methods, and how their energy cost is measured. \secref{sec:rw-adaptive} covers adaptive and early-exit inference, first in conventional networks and then in SNNs, where it takes the form of variable timing. \secref{sec:rw-adv} reviews adversarial attacks, adversarial training and the pitfalls of robustness evaluation, and \secref{sec:rw-snn-robust} narrows this to SNNs. \secref{sec:rw-energy-attacks} reviews attacks that target the computation of adaptive networks rather than their predictions, and \secref{sec:rw-variance} reviews work on variance and reporting practice in machine learning. \secref{sec:rw-synthesis} synthesises the gaps that motivate this thesis and positions it against the closest prior work.
+
+\section{Spiking Neural Networks}
+\label{sec:rw-snn}
+
+\subsection{From biological neurons to the LIF model}
+
+Maass~\cite{maass1997networks} framed networks of spiking neurons as the ``third generation'' of neural network models, after threshold units and sigmoidal units, and showed that they are at least as computationally powerful as their predecessors. In a spiking network, information is carried by the timing and number of discrete events rather than by real-valued activations. Neuroscience offers a hierarchy of neuron models of this kind, from detailed conductance-based models to the simple leaky integrate-and-fire (LIF) model~\cite{gerstner2014neuronal}. The LIF neuron keeps a single state variable, its membrane potential, which integrates input current, decays towards a resting value with time constant $\tau$, and triggers a spike and a reset whenever it crosses a threshold. Its simplicity has made it the default choice for machine-learning SNNs, and it is the model used throughout this thesis.
+
+Roy, Jaiswal and Panda~\cite{roy2019towards} survey the case for spike-based machine intelligence: by computing only when spikes arrive, SNNs replace dense multiply--accumulate operations with sparse, event-driven accumulations, which is well suited to neuromorphic hardware. Two influential chips illustrate this. IBM's TrueNorth~\cite{merolla2014million} integrates a million spiking neurons with an event-driven communication network, and Intel's Loihi~\cite{davies2018loihi} adds on-chip learning to a many-core neuromorphic design. On such hardware, the energy of inference is dominated by the number of synaptic events, which is why both spike sparsity and the number of timesteps matter.
+
+\subsection{Training spiking neural networks}
+
+The spike function is a step: its derivative is zero almost everywhere and undefined at the threshold. This makes gradient-based training of SNNs non-trivial, and two families of methods have emerged.
+
+\paragraph{ANN-to-SNN conversion.} Conversion methods train a conventional artificial network with ReLU activations and then map its weights onto an SNN whose firing rates approximate the original activations~\cite{rueckauer2017conversion}. Conversion inherits the accuracy of mature ANN training pipelines, but rate approximation becomes accurate only over many timesteps, often hundreds, which undermines the efficiency argument.
+
+\paragraph{Direct training with surrogate gradients.} The alternative is to train the SNN itself with backpropagation through time (BPTT), replacing the derivative of the spike function by a smooth surrogate in the backward pass~\cite{neftci2019surrogate}. Spatio-temporal backpropagation~\cite{wu2018spatio} made this practical for deep networks, and subsequent work removed further obstacles. Threshold-dependent batch normalisation~\cite{zheng2021going} stabilises the scale of membrane inputs in deep SNNs. Spike-element-wise residual networks~\cite{fang2021deep} adapt residual learning~\cite{he2016deep} to spiking dynamics, and temporal efficient training~\cite{deng2022temporal} re-weights the loss across timesteps so that the network is useful at every step rather than only at the last one. Architecture search has been used to find SNN topologies that are both accurate and sparse~\cite{na2022autosnn}. Directly trained SNNs now reach competitive accuracy on CIFAR-10 with as few as four to eight timesteps.
+
+The last point, how a network behaves at intermediate timesteps, matters directly for variable timing. A network trained only with its final-timestep output supervised may produce poor predictions at early timesteps, so early exit would be costly. Training with a randomly sampled horizon, or with a loss applied at every timestep, encourages useful early predictions. This thesis studies one such intervention, a mixed-timestep schedule in which the training horizon is sampled uniformly from one to eight for each batch (\secref{sec:meth-training}).
+
+\subsection{Measuring the cost of SNN inference}
+
+Comparing the efficiency of SNNs requires a cost model. The most common hardware-independent proxy is the number of synaptic operations (SynOps): for each layer, the number of accumulate operations triggered by incoming non-zero activations. Horowitz~\cite{horowitz2014computing} estimated that, in a 45\,nm process, a 32-bit floating-point addition costs roughly a fifth of the energy of a multiplication, and such figures are widely used to convert SynOps and dense multiply--accumulate counts into energy estimates.
+
+These estimates have been criticised. Dampfhoffer et al.~\cite{dampfhoffer2023snns} show with a hardware-aware analysis that SNNs are more energy-efficient than equivalent ANNs only when spike activity is low and the number of timesteps small, because memory access and membrane-state updates add costs that SynOps ignore. Sorbaro et al.~\cite{sorbaro2020optimizing} show that energy-aware training can substantially reduce spike counts. The common conclusion is that the number of timesteps is one of the dominant terms in SNN cost. This thesis uses SynOps as its compute metric and, crucially, uses it to \emph{match} VT against fixed-timestep inference rather than to make absolute energy claims (\secref{sec:meth-synops}).
+
+\section{Adaptive and Early-Exit Inference}
+\label{sec:rw-adaptive}
+
+\subsection{Adaptive computation in conventional networks}
+
+The idea that a network should spend more computation on harder inputs predates SNNs. Adaptive Computation Time~\cite{graves2016adaptive} lets a recurrent network learn how many internal steps to take per input, with a halting unit and a ponder cost that penalises extra steps. In feed-forward networks, the same idea takes the form of early exits. BranchyNet~\cite{teerapittayanon2016branchynet} attaches side classifiers to intermediate layers and exits when the entropy of a side classifier's output is low enough. Multi-Scale Dense Networks~\cite{huang2018multi} redesign the architecture so that early classifiers have access to coarse-scale features, enabling anytime and budgeted-batch prediction. Shallow-Deep Networks~\cite{kaya2019shallow} show that many inputs are classified correctly by early layers and that later layers can even ``overthink'' and change a correct early prediction into a wrong one.
+
+Han et al.~\cite{han2022dynamic} survey dynamic neural networks more broadly, distinguishing instance-wise, spatial-wise and temporal-wise adaptation, and Laskaridis, Kouris and Lane~\cite{laskaridis2021adaptive} survey early-exit networks specifically, highlighting the design of exit policies, the training of multi-exit models, and deployment challenges. Both surveys note that early-exit methods are usually evaluated by plotting accuracy against average cost and comparing with the full model, a protocol whose limitations we return to below.
+
+\subsection{Confidence measures for exit decisions}
+
+An exit policy needs a score that predicts whether the current prediction is correct. The simplest is the maximum softmax probability (MSP), which Hendrycks and Gimpel~\cite{hendrycks2017baseline} established as a strong baseline for detecting misclassified and out-of-distribution inputs. Alternatives include the margin between the two largest probabilities, the normalised entropy of the predictive distribution, temperature-scaled softmax (temperature scaling is the standard post-hoc remedy for the over-confidence of modern networks~\cite{guo2017calibration}), and evidential scores that interpret outputs as the parameters of a Dirichlet distribution~\cite{sensoy2018evidential}. All of these are functions of the network's output only, which makes them cheap but also means that they can be manipulated by anyone who can manipulate the output. This thesis compares five such scores as stopping rules (\secref{sec:meth-stoprules}).
+
+\subsection{Variable timing in spiking neural networks}
+
+SNNs are naturally suited to early exit along the time axis. Because the output layer's activity is accumulated over timesteps, a prediction is available after every timestep at no extra cost, and stopping early saves every subsequent timestep of synaptic activity across the whole network.
+
+\paragraph{Dynamic Confidence.} Li, Jones and Furber~\cite{li2023unleashing} propose using the confidence of the SNN's accumulated output to decide, at each timestep, whether to terminate inference. Applied to converted SNNs, the approach substantially reduces the average number of timesteps needed to reach a given accuracy, demonstrating that much of the latency of rate-coded SNNs is spent on inputs that were already classified correctly.
+
+\paragraph{Dynamic-timestep SNNs.} Li, Moitra, Geller and Panda~\cite{li2023input} propose input-aware dynamic timestep SNNs (DT-SNN), which compute the entropy of the accumulated output after each timestep and stop when it falls below a threshold. They evaluate the method on in-memory computing hardware and report large improvements in energy--delay product with little accuracy loss.
+
+\paragraph{Delay-adaptive SNNs with guarantees.} Chen, Park and Simeone~\cite{chen2025knowing} approach the stopping decision from the viewpoint of reliability. Their SpikeCP method uses conformal prediction to produce set-valued predictions at each timestep and stops when the set is small enough, providing a guarantee on the coverage of the final decision regardless of when the model stops.
+
+\paragraph{Uncertainty-based variable timesteps.} The VT-SNN of Rao et al.~\cite{rao2025vtsnn} adapts the number of timesteps per input using an uncertainty measure and applies it to brain disease diagnosis, showing that the idea transfers beyond standard vision benchmarks.
+
+These works establish that VT can reduce SNN latency and energy at small cost in clean accuracy. They differ in the confidence score, the training procedure and the hardware, but they share two features that this thesis revisits. First, their baselines are fixed-horizon SNNs evaluated at their full horizon or at a few chosen horizons, rather than at the horizon that matches VT's measured compute. Second, they evaluate on clean data, and none studies how the exit decision behaves under adversarial perturbation.
+
+\section{Adversarial Robustness}
+\label{sec:rw-adv}
+
+\subsection{Adversarial examples and gradient-based attacks}
+
+Szegedy et al.~\cite{szegedy2014intriguing} discovered that imperceptible perturbations can change the prediction of an image classifier, and Goodfellow, Shlens and Szegedy~\cite{goodfellow2015explaining} explained the phenomenon by the locally linear behaviour of neural networks, introducing the Fast Gradient Sign Method (FGSM), which perturbs each input pixel by $\epsilon$ in the direction of the sign of the loss gradient. Madry et al.~\cite{madry2018towards} framed robustness as a min--max problem and proposed Projected Gradient Descent (PGD): iterate small FGSM steps from a random start and project back onto the $\epsilon$-ball after each step. PGD with a cross-entropy loss became the standard first-order attack. Carlini and Wagner~\cite{carlini2017towards} proposed margin-based losses that are more effective against models that saturate the cross-entropy, and showed that several defences that resisted earlier attacks were broken by a well-designed optimisation.
+
+\subsection{Adversarial training}
+
+The most reliable empirical defence is adversarial training: minimise the loss on adversarial examples generated on the fly~\cite{madry2018towards}. Multi-step PGD training is expensive, which motivated single-step alternatives. Tram\`er et al.~\cite{tramer2018ensemble} proposed R+FGSM, which takes a small random step before the FGSM step to escape the sharp curvature near data points. Wong, Rice and Kolter~\cite{wong2020fast} showed that FGSM with random initialisation, combined with a suitable step size, can match PGD training at a fraction of the cost (``fast is better than free''). This thesis uses this RFGSM recipe for all adversarially trained models (\secref{sec:meth-training}).
+
+Adversarial training has well-documented side effects. Tsipras et al.~\cite{tsipras2019robustness} argue that robustness and standard accuracy can be fundamentally at odds, TRADES~\cite{zhang2019theoretically} makes the trade-off explicit with a regularised objective, and Rice, Wong and Kolter~\cite{rice2020overfitting} show that robust accuracy can peak early and then decline during training (robust overfitting). We observe related effects in our SNNs: adversarially trained models lose 14--26 points of clean accuracy relative to clean-trained ones (\tabref{tab:res-fixed}), and adversarial training is unstable for the smallest backbone, where validation accuracy peaks well before the end of training and one seed's training accuracy collapses (\figref{fig:train-curves}).
+
+\subsection{Pitfalls of robustness evaluation}
+
+A recurring finding is that defences which appear robust are often only hard to attack with the particular attack used. Athalye, Carlini and Wagner~\cite{athalye2018obfuscated} showed that many published defences relied on \emph{obfuscated gradients} (shattered, stochastic or vanishing gradients) and could be broken by techniques such as backward-pass differentiable approximation and Expectation over Transformation (EoT)~\cite{athalye2018synthesizing}. Carlini et al.~\cite{carlini2019evaluating} distilled the lessons into a checklist for evaluating robustness, and Tram\`er et al.~\cite{tramer2020adaptive} showed in detail how thirteen defences could be circumvented by attacks adapted to their specific mechanism.
+
+To remove the dependence on attack hyperparameters, Croce and Hein~\cite{croce2020reliable} proposed AutoAttack, an ensemble of four complementary, parameter-free attacks. Two are versions of APGD, one with a cross-entropy loss and one with a targeted difference-of-logits-ratio loss, and both adapt their step size automatically. The third is the targeted Fast Adaptive Boundary attack~\cite{croce2020minimally}, which searches for minimal perturbations. The fourth is the query-based black-box Square Attack~\cite{andriushchenko2020square}, which does not use gradients at all and therefore cannot be fooled by gradient masking. AutoAttack routinely lowers reported robust accuracy by several points relative to PGD, and it is the standard of RobustBench~\cite{croce2021robustbench}. The gap between PGD and AutoAttack is a central quantity in this thesis: it turns out to hide VT's robustness cost entirely (\secref{sec:res-robustness}).
+
+\section{Adversarial Robustness of Spiking Neural Networks}
+\label{sec:rw-snn-robust}
+
+\subsection{Early claims of inherent robustness}
+
+Sharmin et al.~\cite{sharmin2019comprehensive} provided one of the first comprehensive analyses of SNN robustness, finding that SNNs trained with spike-based methods could be more robust than equivalent ANNs to gradient-based attacks, especially in the black-box setting. Sharmin et al.~\cite{sharmin2020inherent} attributed this inherent robustness to two properties: discrete input encoding (Poisson rate coding introduces randomness) and the non-linear, leaky dynamics of spiking neurons. HIRE-SNN~\cite{kundu2021hire} built on this view by training SNNs with crafted input noise, improving robustness without the full cost of adversarial training.
+
+\subsection{Robust training and certification}
+
+Liang et al.~\cite{liang2022toward} adapted bound-propagation-based certified training to SNNs, providing verifiable robustness guarantees for spiking models. RSC-SNN~\cite{wu2024rsc} observed that Poisson rate coding behaves like randomised smoothing, and proposed randomised smoothing coding to improve the robustness--accuracy trade-off. RandHet-SNN~\cite{wang2025random} introduced randomly heterogeneous spiking neurons as an adversarial defence. The experimental code base used in this thesis descends from its BrainCog implementation, although we deliberately disable all stochastic components (\secref{sec:meth-impl}). Ding et al.~\cite{ding2025neuromorphic} argue more broadly that the computational paradigms of neuromorphic systems can contribute to robustness.
+
+\subsection{Reliable evaluation of SNN robustness}
+
+The same evaluation pitfalls that affected ANN defences also apply to SNNs, and more severely. Surrogate gradients are an approximation chosen for training, and an attacker who uses the training surrogate may obtain weak or vanishing gradients. Stochastic encodings and neurons introduce exactly the kind of randomness that EoT was designed to handle. Wang et al.~\cite{wang2026towards} show that standard gradient-based attacks can substantially over-estimate SNN robustness because of poorly matched surrogate gradients, and propose attacks that adapt the surrogate to obtain more reliable estimates. Their conclusion, that much reported SNN robustness reflects weak evaluation rather than genuine resistance, motivates our use of deterministic neurons (no EoT needed), AutoAttack (including the gradient-free Square attack), and an attacker that differentiates through the full trace of per-timestep outputs.
+
+\subsection{What is missing}
+
+All of the works above evaluate fixed-horizon SNNs. None studies an SNN whose horizon depends on the input, so none asks whether the stopping decision itself changes robustness, whether an adversary can exploit it, or how robustness relates to the number of timesteps actually run.
+
+\section{Attacks on the Computation of Adaptive Networks}
+\label{sec:rw-energy-attacks}
+
+Adaptive networks expose a second target besides the prediction: the amount of computation. Haque et al.~\cite{haque2020ilfo} introduced ILFO, an attack on adaptive neural networks that perturbs inputs to increase the computation they trigger, by optimising intermediate outputs that control the network's gating decisions. Hong et al.~\cite{hong2021panda} studied multi-exit networks specifically and showed that their DeepSloth attack could almost entirely eliminate the computational savings of early exit, in some cases while preserving the correct label, and that such slowdown perturbations transfer across models. Shumailov et al.~\cite{shumailov2021sponge} generalised the idea to \emph{sponge examples}, inputs crafted to maximise the energy consumption and latency of a network, and demonstrated them on hardware accelerators.
+
+These attacks were developed for ANNs whose adaptive behaviour comes from gating modules or side classifiers. VT in SNNs is a particularly exposed case: its exit decision is a simple threshold on an output-derived confidence score, the efficiency gain is the main reason to use it, and on neuromorphic hardware energy scales directly with the number of timesteps executed. Whether compute-overuse attacks transfer to VT SNNs, and whether adversarial training defends against them, has not been studied.
+
+\section{Variance and Reporting Practice}
+\label{sec:rw-variance}
+
+The final strand concerns how reliable reported improvements are. Henderson et al.~\cite{henderson2018deep} showed in deep reinforcement learning that random seeds alone can produce differences as large as those claimed between methods. Melis, Dyer and Blunsom~\cite{melis2018state} found that a well-tuned baseline could outperform more recent language models, and Dodge et al.~\cite{dodge2019show} argued that results should be reported as a function of tuning budget. Lipton and Steinhardt~\cite{lipton2019troubling} discussed broader troubling trends, including the failure to identify the sources of empirical gains. Bouthillier et al.~\cite{bouthillier2021accounting} decomposed benchmark variance into its sources (data sampling, initialisation, data order, hyperparameter choice) and recommended randomising as many as possible and testing paired differences. Picard~\cite{picard2021torch} showed that on CIFAR-10, the choice of random seed alone produces a spread of accuracy large enough to make many published differences meaningless.
+
+Two practices from this literature directly shape our methodology: comparing methods through \emph{paired} differences on the same checkpoint, which cancels much of the seed variance, and replicating key claims across independently trained seeds rather than reporting a single run.
+
+\section{Synthesis and Research Gap}
+\label{sec:rw-synthesis}
+
+\tabref{tab:rw-gap} summarises the closest prior work along the dimensions that matter for this thesis. Three gaps stand out.
+
+\begin{enumerate}
+    \item \textbf{No compute-matched control.} VT methods are compared with fixed-horizon SNNs at the full horizon, or at a few horizons plotted on the same axes, but not systematically with the fixed horizon that uses the same measured compute. Without this control, the efficiency gain of choosing \emph{when} to stop cannot be separated from the gain of simply stopping earlier.
+    \item \textbf{No adversarial evaluation of the exit gate.} SNN robustness studies evaluate fixed-horizon models, while VT studies evaluate clean data. How VT changes robustness, and whether its gate can be attacked, is unexplored, although analogous attacks on multi-exit ANNs are well documented.
+    \item \textbf{Single-run, single-selection conclusions.} Reported VT gains are typically single runs at a single operating point. How the conclusions depend on the selection of that point, on the strength of the attack, and on training-seed variance is not examined.
+\end{enumerate}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Positioning of this thesis against the closest prior work.}
+    \label{tab:rw-gap}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}l c c c c c c@{}}
+        \toprule
+        Work & SNN & Adaptive $T$ & \makecell{Compute-\\matched} & \makecell{Strong\\attack} & \makecell{Gate\\attack} & \makecell{Multi-\\seed} \\
+        \midrule
+        Dynamic Confidence~\cite{li2023unleashing} & \checkmark & \checkmark & $\circ$ & --- & --- & --- \\
+        DT-SNN~\cite{li2023input}                    & \checkmark & \checkmark & $\circ$ & --- & --- & --- \\
+        SpikeCP~\cite{chen2025knowing}               & \checkmark & \checkmark & $\circ$ & --- & --- & --- \\
+        HIRE-SNN~\cite{kundu2021hire}                & \checkmark & --- & --- & $\circ$ & --- & --- \\
+        RSC-SNN~\cite{wu2024rsc}                     & \checkmark & --- & --- & \checkmark & --- & --- \\
+        Reliable SNN eval.~\cite{wang2026towards}    & \checkmark & --- & --- & \checkmark & --- & --- \\
+        DeepSloth~\cite{hong2021panda}               & --- & \checkmark & --- & \checkmark & \checkmark & --- \\
+        ILFO~\cite{haque2020ilfo}                    & --- & \checkmark & --- & --- & \checkmark & --- \\
+        \midrule
+        \textbf{This thesis}                         & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{4pt}
+    {\footnotesize \checkmark\ addressed \quad $\circ$ partially addressed \quad --- not addressed}
+\end{table}
+
+\paragraph{Positioning.} This thesis does not propose a new VT method. It takes the simplest and most common form of VT, a maximum-softmax threshold on accumulated logits, and studies it under a protocol designed to answer the three gaps above: every VT point is compared with its compute-matched fixed horizon, robustness is measured with AutoAttack and with gate-specific attacks by an attacker that sees the full trace, and the key comparisons are replicated across training seeds and tested for sensitivity to the selection rule. The closest related work is DeepSloth~\cite{hong2021panda}, which established compute-inflation attacks on multi-exit ANNs. We transfer that threat model to VT in SNNs and relate it to training regime. Our conclusions about efficiency are therefore complementary to, not in competition with, the VT methods reviewed above: we find that their central premise holds under a stricter comparison, and identify the robustness cost and attack surface that accompany it.
+
+\section{Summary}
+
+The literature establishes that VT can make SNNs cheaper, that SNN robustness must be measured with strong and adapted attacks, and that adaptive computation can itself be attacked. It does not establish whether VT is better than a fixed horizon at equal compute, how VT interacts with adversarial robustness, or whether these conclusions are robust to selection and seed variance. The next chapter describes the methodology we use to answer these questions.

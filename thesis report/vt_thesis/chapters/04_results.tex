@@ -1,0 +1,294 @@
+\chapter{Results and Discussion}
+\label{ch:results}
+
+This chapter presents the experimental results. \secref{sec:res-map} maps the experiments to the research questions and \secref{sec:res-setup} summarises the setup and metrics. \secref{sec:res-fixed} characterises fixed-timestep inference, the baseline against which everything else is measured. \secref{sec:res-efficiency} answers RQ1 on clean data, \secref{sec:res-stoprules} tests whether the answer depends on the stopping rule, and \secref{sec:res-selection} shows how it depends on the operating-point selection rule (RQ4). \secref{sec:res-robustness} turns to robustness (RQ2), \secref{sec:res-gate} to the gate-specific attacks (RQ3), and \secref{sec:res-multiseed} to the multi-seed replication that decides which of these findings hold. \secref{sec:res-discussion} discusses the results together, and \secref{sec:res-threats} examines threats to validity.
+
+\section{Mapping Objectives to Experiments}
+\label{sec:res-map}
+
+\tabref{tab:res-map} lists the experiments, the research questions they address and where their results appear.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Experiments, the research questions they address, and where their results are reported.}
+    \label{tab:res-map}
+    \small
+    \begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}X l l l@{}}
+        \toprule
+        Experiment & RQ & Configurations & Section \\
+        \midrule
+        Fixed-timestep sweeps $T = 1..8$                       & ---      & all 9                 & \ref{sec:res-fixed} \\
+        VT sweeps and compute-matched comparison               & RQ1      & all 9                 & \ref{sec:res-efficiency} \\
+        Fixed-T8 vs mixed-T training schedule                  & RQ1      & ResNet-18 (4)         & \ref{sec:res-mixt} \\
+        Stopping-rule comparison at matched depth              & RQ1, RQ4 & 7 of 9                & \ref{sec:res-stoprules} \\
+        Max-gain vs VT-neutral selection; tolerance $\delta$   & RQ4      & all 9                 & \ref{sec:res-selection} \\
+        PGD-20 and AutoAttack, single run                      & RQ2      & all 9                 & \ref{sec:res-robustness} \\
+        Confidence trajectories under attack                   & RQ2, RQ3 & ResNet-18 adv         & \ref{sec:res-probe} \\
+        Wrong-early-exit and compute-overuse attacks           & RQ3      & all 9                 & \ref{sec:res-gate} \\
+        Three-seed replication with paired tests               & RQ1, RQ2, RQ4 & ResNet-18, VGG16 adv & \ref{sec:res-multiseed} \\
+        Attack-seed variance                                   & RQ4      & 3 adv backbones       & \ref{sec:res-multiseed} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Setup and Metrics}
+\label{sec:res-setup}
+
+The setup is described in full in \chapref{ch:method}, and here we summarise the points needed to read the results. All models are spiking LIF networks with $T_{\max} = 8$, trained for 100 epochs on 40{,}000 CIFAR-10 images. Operating points are selected on a 5{,}000-image calibration split and reported on the 10{,}000-image test set. Attacks are $\ell_\infty$ with $\epsilon = 8/255$, run on a 2{,}000-image class-balanced test subset (1{,}000 for the multi-seed study). We report:
+
+\begin{itemize}
+    \item \textbf{Accuracy} (\%) on clean or attacked inputs.
+    \item \textbf{Mean SynOps} per image (\eqnref{eq:synops}), and the \textbf{SynOps saving} of VT relative to the full horizon, $1 - \SynOps_{\VT} / \SynOps_{\mathrm{fix}}(8)$.
+    \item \textbf{Mean exit depth}: the average number of timesteps executed.
+    \item \textbf{Gain}: VT accuracy minus the accuracy of the compute-matched fixed horizon $T^*$ (\eqnref{eq:gain}).
+    \item \textbf{Below full}: full-horizon accuracy minus VT accuracy, i.e.\ what VT gives up relative to running all eight timesteps.
+\end{itemize}
+
+All differences are in percentage points (``points''). As a guide, the binomial 95\% half-width is $\pm 0.6$--$1.0$ points for clean accuracy on the full test set and about $\pm 2$ points for attacked accuracy on a 2{,}000-image subset.
+
+\section{Fixed-Timestep Behaviour}
+\label{sec:res-fixed}
+
+\tabref{tab:res-fixed} and \figref{fig:fixed-sweeps} show test accuracy as a function of the fixed horizon $T$ for all nine configurations. Four observations shape the rest of the chapter.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Clean test accuracy (\%) of fixed-timestep inference at each horizon $T$ ($n = 10{,}000$).}
+    \label{tab:res-fixed}
+    \small
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{@{}l r r r r r r r r@{}}
+        \toprule
+        Configuration & $T=1$ & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\
+        \midrule
+        R18 clean       & 10.00 & 84.72 & 87.89 & 90.11 & 90.48 & 90.97 & 91.09 & 91.26 \\
+        R18 adv (1)     & 12.11 & 57.51 & 66.79 & 69.35 & 71.46 & 72.98 & 73.23 & 73.67 \\
+        R18 adv (2)     & 10.00 & 58.74 & 65.93 & 72.30 & 73.53 & 76.01 & 76.32 & 77.18 \\
+        R18 clean mixT  & 41.39 & 81.48 & 86.75 & 88.78 & 89.80 & 90.26 & 90.61 & 90.57 \\
+        R18 adv mixT    & 46.28 & 70.04 & 74.31 & 76.26 & 76.82 & 77.14 & 77.58 & 77.79 \\
+        VGG clean       & 10.00 & 70.94 & 80.50 & 84.63 & 86.16 & 87.50 & 87.82 & 88.20 \\
+        VGG adv         & 10.00 & 23.81 & 51.41 & 57.62 & 61.23 & 63.75 & 64.62 & 65.52 \\
+        MBv2 clean      & 10.00 & 17.60 & 37.72 & 61.06 & 64.91 & 73.92 & 74.71 & 77.66 \\
+        MBv2 adv        & 10.00 & 23.47 & 36.55 & 45.54 & 47.63 & 50.09 & 50.64 & 51.44 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{fixed_sweeps}
+    \caption[Fixed-timestep accuracy as a function of the horizon]{Clean test accuracy of fixed-timestep inference as a function of the horizon $T$. Solid lines show the fixed-T8 training schedule and dashed lines the mixed-T schedule.}
+    \label{fig:fixed-sweeps}
+\end{figure}
+
+\paragraph{The first timestep carries no information for fixed-T8 models.} Every model trained only at $T = 8$ is at chance (10\%) at $T = 1$. With $V_0 = 0$, a leak of $1/\tau = 1/2$ and a threshold of $0.5$, deep-layer neurons cannot reach threshold in a single step, so the output at $t = 1$ is essentially the classifier bias. Mixed-T models, which were trained to produce useful predictions at $T = 1$, reach 41--46\% there.
+
+\paragraph{Accuracy saturates, but at different rates.} ResNet-18 clean reaches 87.89\% at $T = 3$, within 3.4 points of its $T = 8$ accuracy. VGG16 clean needs $T = 5$ to come within about two points, and MobileNetV2 needs $T = 6$--$8$. Adversarially trained models saturate more slowly than their clean counterparts on every backbone. How quickly a backbone saturates bounds how much any early-exit method can save: if the fixed-timestep curve is flat after $T = 3$, there is little to gain by stopping at $T = 3$ for some inputs and $T = 8$ for others.
+
+\paragraph{Adversarial training costs 14--26 points of clean accuracy.} At $T = 8$, adversarial training reduces clean accuracy from 91.26\% to 73.67--77.18\% on ResNet-18, from 88.20\% to 65.52\% on VGG16 and from 77.66\% to 51.44\% on MobileNetV2, consistent with the robustness--accuracy trade-off reported for ANNs~\cite{tsipras2019robustness}. MobileNetV2 is the weakest backbone in both regimes, and its depthwise layers appear to suffer most from binarised activations.
+
+\paragraph{Mixed-T training reshapes the curve.} The effect of the mixed-T schedule depends on the regime. Under adversarial training it improves accuracy at every horizon, by up to 11 points at $T = 2$. Under clean training it lifts only $T = 1$ (41.39\% vs 10.00\%) and is slightly \emph{worse} at every other horizon (for example 86.75\% vs 87.89\% at $T = 3$). Full-horizon accuracy is roughly unchanged in both regimes (90.57\% vs 91.26\% clean, 77.79\% vs 77.18\% adversarial). It also changes sparsity: the mixed-T clean ResNet-18 performs $5.65 \times 10^{8}$ SynOps at $T = 8$, 37\% more than its fixed-T8 counterpart ($4.14 \times 10^{8}$), because its neurons fire more. We return to the consequences for VT in \secref{sec:res-mixt}.
+
+\section{RQ1: Efficiency at Equal Compute}
+\label{sec:res-efficiency}
+
+\subsection{The compute--accuracy frontier}
+
+\figref{fig:frontier-main} shows the VT and fixed-timestep frontiers for the clean-trained ResNet-18, our primary configuration. Each orange point is one VT threshold and each blue point is one fixed horizon. At every compute level, the VT curve lies above the fixed-timestep curve. At the VT-neutral operating point ($\theta = 0.90$, $\delta = 1$), VT reaches 90.62\% with a mean exit depth of 3.01 timesteps and $1.33 \times 10^{8}$ SynOps per image. The compute-matched fixed horizon, $T^* = 3$, uses $1.27 \times 10^{8}$ SynOps and reaches 87.89\%. VT is therefore 2.73 points more accurate at slightly more than the same compute, and only 0.64 points below the full-horizon model while using 68\% fewer SynOps.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{frontier_r18_clean}
+    \caption[Compute--accuracy frontier for the clean-trained ResNet-18]{Compute--accuracy frontier for the clean-trained ResNet-18 (test set). Orange: VT at each threshold $\theta$. Blue: fixed-timestep inference at each horizon. The star marks the VT-neutral operating point and the diamond its compute-matched fixed-timestep control.}
+    \label{fig:frontier-main}
+\end{figure}
+
+\figref{fig:frontiers-all} repeats the comparison for all nine configurations, and \tabref{tab:res-neutral} lists the VT-neutral operating points. The pattern is consistent: \textbf{at the VT-neutral operating point, VT is more accurate than its compute-matched fixed horizon on all nine configurations}, with gains from $+0.14$ to $+3.37$ points.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{frontiers_all}
+    \caption[Compute--accuracy frontiers for all configurations]{Compute--accuracy frontiers for all nine configurations (test set). Annotations give the gain of the VT-neutral operating point ($\delta = 1$) over its compute-matched control. The $y$-axes are cropped to the region of interest, so fixed-timestep points at $T = 1$ (and $T = 2$ where far below) lie off the bottom of several panels.}
+    \label{fig:frontiers-all}
+\end{figure}
+
+\begin{table}[htbp]
+    \centering
+    \caption[VT-neutral operating points]{VT-neutral operating points ($\delta = 1$, selected on calibration, reported on test, $n = 10{,}000$). Depth: mean exit timestep. $T^*$: compute-matched fixed horizon. Gain: VT minus matched fixed accuracy. Below full: $T=8$ accuracy minus VT accuracy. Saving: SynOps saved relative to $T = 8$. Above: number of VT thresholds (of 8) that lie above the fixed-timestep frontier. $^\dagger$No threshold met the tolerance, so the most accurate was used.}
+    \label{tab:res-neutral}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}l c c r c r r r r c@{}}
+        \toprule
+        Configuration & $\theta$ & Depth & VT acc & $T^*$ & Fixed acc & Gain & Below full & Saving & Above \\
+        \midrule
+        R18 clean                 & 0.90 & 3.01 & 90.62 & 3 & 87.89 & $+2.73$ & 0.64 & 67.9\% & 8/8 \\
+        R18 adv (1)               & 0.60 & 5.01 & 72.83 & 5 & 71.46 & $+1.37$ & 0.84 & 42.0\% & 8/8 \\
+        R18 adv (2)               & 0.60 & 5.13 & 76.42 & 5 & 73.53 & $+2.89$ & 0.76 & 40.3\% & 8/8 \\
+        R18 clean mixT$^\dagger$  & 0.99 & 4.24 & 88.92 & 4 & 88.78 & $+0.14$ & 1.65 & 49.6\% & 3/8 \\
+        R18 adv mixT              & 0.80 & 5.43 & 77.50 & 5 & 76.82 & $+0.68$ & 0.29 & 35.6\% & 5/8 \\
+        VGG clean                 & 0.80 & 3.89 & 87.75 & 4 & 84.63 & $+3.12$ & 0.45 & 59.3\% & 8/8 \\
+        VGG adv                   & 0.50 & 5.74 & 64.64 & 6 & 63.75 & $+0.89$ & 0.88 & 35.0\% & 8/8 \\
+        MBv2 clean                & 0.99 & 7.41 & 78.08 & 7 & 74.71 & $+3.37$ & $-0.42$ & 7.4\% & 4/8 \\
+        MBv2 adv                  & 0.60 & 7.21 & 50.92 & 7 & 50.64 & $+0.28$ & 0.52 & 10.0\% & 7/8 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{How large is the gain, and is it real?}
+
+The gains in \tabref{tab:res-neutral} fall into three groups.
+
+\paragraph{Clear gains with large savings.} On the clean-trained fixed-T8 ResNet-18 and VGG16, VT gains $+2.73$ and $+3.12$ points over the matched control while saving 68\% and 59\% of SynOps relative to the full horizon, and every one of the eight thresholds lies above the fixed-timestep frontier. Both gains are three to five times the binomial half-width ($\pm 0.57$ and $\pm 0.64$). These are the configurations in which VT works as advertised.
+
+\paragraph{Moderate gains on adversarially trained models.} On the adversarially trained fixed-T8 models, the gains are smaller: $+1.37$ and $+2.89$ on the two ResNet-18 runs, $+0.89$ on VGG16 and $+0.28$ on MobileNetV2. Savings are 35--42\% for ResNet-18 and VGG16. The two ResNet-18 runs, trained with identical settings, differ by a factor of two in gain, which is a direct warning that single-run gains of this size must be replicated before they are believed. \secref{sec:res-multiseed} does so and finds that the gain on adversarially trained models is real.
+
+\paragraph{Small gains where there is little to save.} On MobileNetV2, VT exits late: the mean depth is 7.41 (clean) and 7.21 (adversarial), saving only 7--10\% of SynOps. The clean MobileNetV2 has a large gain ($+3.37$), but its VT point is \emph{above} the full-horizon accuracy ($-0.42$ below full), and it is matched against $T = 7$, where the fixed curve is flat (73.92\% at $T = 6$, 74.71\% at $T = 7$) before jumping to 77.66\% at $T = 8$ (\tabref{tab:res-fixed}). This gain therefore reflects the irregular shape of MobileNetV2's fixed-timestep curve near the full horizon rather than an efficiency win, and we do not count it as evidence for VT. Gains must always be read together with depth and saving.
+
+\subsection{Where do inputs exit?}
+
+\figref{fig:exit-hist} shows the distribution of exit timesteps at the VT-neutral operating points. The shape of these histograms explains the differences between configurations.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{exit_histograms}
+    \caption[Distribution of exit timesteps at the VT-neutral operating points]{Distribution of exit timesteps at the VT-neutral operating points (test set). Clean-trained models (top) concentrate exits early, while adversarially trained models (bottom) send a large fraction of inputs to the full horizon.}
+    \label{fig:exit-hist}
+\end{figure}
+
+For the clean-trained ResNet-18, 67\% of test images exit at $t = 2$, the earliest step at which a fixed-T8 model has any information, and only 10\% run to $t = 8$. The VT gain comes from this bimodality: most images are already classified correctly and confidently at $t = 2$, and the compute saved on them is spent on the minority that need the full horizon. A fixed horizon of $T = 3$ spends the same total compute uniformly and so under-serves the hard images. VGG16 shows the same pattern with exits centred one step later, consistent with its slower fixed-timestep saturation.
+
+Adversarially trained models are less confident: 39--42\% of test images run to $t = 8$ on ResNet-18 and VGG16, and their softmax confidence rarely exceeds high thresholds, which is why their VT-neutral thresholds are low (0.5--0.6). MobileNetV2 sends about 80\% of images to the full horizon in both regimes, leaving little room for savings. Exits at $t = 1$ never occur for fixed-T8 models (their $t = 1$ output is uninformative) but account for 7--8\% of exits for mixed-T models.
+
+\subsection{Effect of the training schedule}
+\label{sec:res-mixt}
+
+\figref{fig:mixt} compares the fixed-T8 and mixed-T ResNet-18 frontiers. Under adversarial training, mixed-T training raises the fixed-timestep curve at every horizon, and most at short horizons, which is exactly where VT drew its advantage. Under clean training, the fixed-timestep curve barely moves in accuracy but shifts to the right in compute, because the mixed-T network is less sparse. The VT curve, however, moves down: at $\theta = 0.95$ the mixed-T VT model reaches 84.15\% at $2.02 \times 10^{8}$ SynOps, below the fixed horizon $T = 3$ (86.75\% at $1.91 \times 10^{8}$).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{mixT_frontiers}
+    \caption[Effect of the training schedule on the ResNet-18 frontiers]{Effect of the training schedule on the ResNet-18 frontiers (test set). Solid lines show the fixed-T8 schedule and dashed lines the mixed-T schedule.}
+    \label{fig:mixt}
+\end{figure}
+
+The gain of VT shrinks under mixed-T training: from $+2.73$ to $+0.14$ for clean training and from $+2.89$ (run 2, or $+1.37$ for run 1) to $+0.68$ for adversarial training, and only 3 and 5 of the 8 thresholds lie above the frontier. For the clean mixed-T model, no threshold came within $\delta = 1$ point of the full horizon on the calibration split, so the most accurate threshold ($\theta = 0.99$) was used, 1.65 points below full.
+
+The two regimes therefore lose the VT advantage for different reasons. Under adversarial training, the baseline gets stronger: a model trained across horizons is a much better short-horizon classifier, and per-input stopping adds little to it. Under clean training, the stopping signal gets worse: the mixed-T model is trained to commit to a prediction after one or two timesteps, and 43\% of test images exit at $t \le 2$ even at $\theta = 0.99$ (\figref{fig:exit-hist} shows the fixed-T8 models for contrast), but its early confidence is a poorer indicator of correctness than that of the fixed-T8 model. In both cases, VT's advantage is largest when the fixed-horizon model has not been trained for short horizons but still produces confident and correct early predictions on easy inputs. This also means that VT's efficiency gain should be compared not only with a compute-matched horizon but with a \emph{training-matched} one: a fair baseline for VT is a fixed-horizon model trained for the horizon at which it will be run. Mixed-T training is not free, however: on clean data it makes the network less sparse, and its VT points require more SynOps for the same accuracy than the fixed-T8 model's VT points do (\figref{fig:mixt}, left).
+
+\section{Stopping Rules}
+\label{sec:res-stoprules}
+
+Does the conclusion depend on using the maximum softmax probability as the confidence score? \tabref{tab:res-stoprules} and \figref{fig:stoprules} compare the five stopping rules at approximately equal mean depth on the configurations where the reference depth is meaningful. (For the clean mixed-T ResNet-18 and the clean MobileNetV2, the stopping-rule comparison was calibrated to the depth of the degenerate max-gain operating point discussed in \secref{sec:res-selection}, so their rows are relegated to Appendix~\ref{app:tables}.)
+
+\begin{table}[htbp]
+    \centering
+    \caption[Stopping-rule comparison]{Stopping-rule comparison (test accuracy \% at mean exit depth in parentheses). Each rule's threshold was calibrated to match the depth of the max-softmax operating point.}
+    \label{tab:res-stoprules}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{@{}l c c c c c c@{}}
+        \toprule
+        Configuration & Fixed $T{=}8$ & Max softmax & Margin & Entropy & Temp.\ softmax & Evidential \\
+        \midrule
+        R18 clean    & 91.26 & 88.91 (2.39) & 89.04 (2.38) & 88.14 (2.34) & 89.35 (2.59) & 86.38 (2.19) \\
+        R18 adv (1)  & 73.67 & 71.48 (4.33) & 73.31 (5.42) & 72.24 (5.00) & 73.61 (6.16) & 67.99 (3.75) \\
+        R18 adv (2)  & 77.18 & 76.42 (5.13) & 76.77 (5.46) & 76.04 (5.19) & 77.14 (6.25) & 73.16 (4.62) \\
+        R18 adv mixT & 77.79 & 77.50 (5.43) & 77.47 (5.50) & 77.41 (5.42) & 77.37 (5.43) & 76.13 (6.04) \\
+        VGG clean    & 88.20 & 86.99 (3.53) & 86.99 (3.50) & 86.11 (3.44) & 87.39 (3.82) & 82.54 (2.95) \\
+        VGG adv      & 65.52 & 65.21 (6.27) & 65.40 (6.63) & 64.46 (6.17) & 65.45 (7.02) & 62.22 (5.22) \\
+        MBv2 adv     & 51.44 & 50.92 (7.21) & 51.30 (7.49) & 50.91 (7.35) & 51.49 (7.89) & 49.48 (6.61) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{stopping_rules}
+    \caption[Stopping rules compared at matched exit depth]{Stopping rules compared at matched exit depth. The thin line is the fixed-timestep curve, and points above it are better than a fixed horizon of the same depth.}
+    \label{fig:stoprules}
+\end{figure}
+
+Three findings emerge. First, \textbf{all four softmax-based rules lie above the fixed-timestep curve} on every configuration in \figref{fig:stoprules}: the VT advantage is not specific to the max-softmax score. Second, max softmax, margin and entropy are within about one point of each other wherever they land at the same depth. Differences that look larger (for example 71.48\% vs 73.31\% on R18 adv (1)) come with a full timestep of extra depth, because the depth calibration on a discrete threshold grid is coarse. Temperature softmax tends to land deeper and correspondingly more accurately. Third, \textbf{the evidential surrogate is consistently the worst}: it is 1.4--4.5 points less accurate than max softmax, usually while exiting earlier, and lands on or only slightly above the fixed-timestep curve. On R18 adv mixT it lands deeper (6.04) yet less accurate, below the fixed curve. Its uncertainty mass saturates quickly for large logits, so it exits confidently on inputs that are not yet correctly classified. The choice among the softmax-based rules is therefore a second-order concern, and we use max softmax throughout.
+
+\section{RQ4: Sensitivity to the Selection Rule}
+\label{sec:res-selection}
+
+\subsection{Max-gain selection is biased}
+
+\tabref{tab:res-selection} compares the operating points chosen by the max-gain rule (used in our original experiments) with the VT-neutral points of \tabref{tab:res-neutral}, and \figref{fig:selection} visualises the difference.
+
+\begin{table}[htbp]
+    \centering
+    \caption[Max-gain versus VT-neutral operating points]{Max-gain versus VT-neutral ($\delta = 1$) operating points (test set). Max-gain selection chooses the threshold with the largest calibration gain over its matched control.}
+    \label{tab:res-selection}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}l c c r r r @{\hspace{12pt}} c c r r@{}}
+        \toprule
+        & \multicolumn{5}{c}{Max-gain selection} & \multicolumn{4}{c}{VT-neutral selection} \\
+        \cmidrule(r{12pt}){2-6} \cmidrule(l){7-10}
+        Configuration & $\theta$ & Depth & VT acc & Gain & Below full & $\theta$ & Depth & Gain & Below full \\
+        \midrule
+        R18 clean       & 0.70 & 2.39 & 88.91 & $+4.19$  & 2.35  & 0.90 & 3.01 & $+2.73$ & 0.64 \\
+        R18 adv (1)     & 0.50 & 4.33 & 71.48 & $+2.13$  & 2.19  & 0.60 & 5.01 & $+1.37$ & 0.84 \\
+        R18 adv (2)     & 0.60 & 5.13 & 76.42 & $+2.89$  & 0.76  & 0.60 & 5.13 & $+2.89$ & 0.76 \\
+        R18 clean mixT  & 0.60 & 1.38 & 59.63 & $+18.24$ & 30.94 & 0.99 & 4.24 & $+0.14$ & 1.65 \\
+        R18 adv mixT    & 0.80 & 5.43 & 77.50 & $+0.68$  & 0.29  & 0.80 & 5.43 & $+0.68$ & 0.29 \\
+        VGG clean       & 0.70 & 3.53 & 86.99 & $+6.49$  & 1.21  & 0.80 & 3.89 & $+3.12$ & 0.45 \\
+        VGG adv         & 0.60 & 6.27 & 65.21 & $+1.46$  & 0.31  & 0.50 & 5.74 & $+0.89$ & 0.88 \\
+        MBv2 clean      & 0.50 & 2.38 & 28.96 & $+11.36$ & 48.70 & 0.99 & 7.41 & $+3.37$ & $-0.42$ \\
+        MBv2 adv        & 0.60 & 7.21 & 50.92 & $+0.28$  & 0.52  & 0.60 & 7.21 & $+0.28$ & 0.52 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{selection_bias}
+    \caption[Effect of the selection rule on the reported gain]{Effect of the selection rule. Left: gain over the compute-matched control. Right: accuracy given up relative to the full horizon. Max-gain selection inflates the gain on six of nine configurations, and on two it selects operating points 31--49 points below the full horizon.}
+    \label{fig:selection}
+\end{figure}
+
+On three configurations the two rules agree. On the other six, max-gain selection reports a larger gain, in five of them by choosing a lower threshold (earlier exits) than the VT-neutral rule. The inflation is moderate where both points are reasonable: $+4.19$ instead of $+2.73$ on R18 clean, $+6.49$ instead of $+3.12$ on VGG clean. On two configurations it is extreme. For the clean mixed-T ResNet-18, max-gain selection picks $\theta = 0.60$, where VT reaches only 59.63\% with a mean depth of 1.38, and reports an $+18.24$ point gain over $T = 1$ (41.39\%). For the clean MobileNetV2 it picks $\theta = 0.50$, where VT reaches 28.96\%, and reports an $+11.36$ point gain over $T = 2$ (17.60\%). Both operating points are useless in practice, at 31 and 49 points below the full-horizon accuracy, and the large gains are comparisons between two bad models, one slightly less bad than the other.
+
+The mechanism is simple. Near the start of the fixed-timestep curve, accuracy rises steeply with compute, so VT's ability to spend slightly more compute on some inputs buys a large accuracy difference relative to the matched horizon. Maximising the gain therefore drives the selection towards the steepest part of the fixed curve, which is also where both models are least accurate. The rule rewards VT for the very comparison it is being evaluated on.
+
+In our original experiments this failure was caught for MobileNetV2 by inspection and overridden by hand with $\theta = 0.95$, and the attack experiments for that configuration use this threshold. It was not caught for the mixed-T ResNet-18, whose attack experiments therefore use the degenerate $\theta = 0.60$. The VT-neutral rule removes the need for such judgement calls.
+
+\subsection{Sensitivity to the tolerance}
+
+The VT-neutral rule has one parameter, the tolerance $\delta$. \tabref{tab:res-delta} and \figref{fig:delta} report the gain at $\delta \in \{0.5, 1, 2\}$.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Gain over the compute-matched control (points) under VT-neutral selection with tolerance $\delta$.}
+    \label{tab:res-delta}
+    \small
+    \begin{tabular}{@{}l r r r@{}}
+        \toprule
+        Configuration & $\delta = 0.5$ & $\delta = 1$ & $\delta = 2$ \\
+        \midrule
+        R18 clean       & $+1.15$ & $+2.73$ & $+2.24$ \\
+        R18 adv (1)     & $+2.03$ & $+1.37$ & $+1.37$ \\
+        R18 adv (2)     & $+2.89$ & $+2.89$ & $+1.62$ \\
+        R18 clean mixT  & $+0.14$ & $+0.14$ & $+0.14$ \\
+        R18 adv mixT    & $+0.68$ & $+0.68$ & $-0.35$ \\
+        VGG clean       & $+3.31$ & $+3.12$ & $+6.49$ \\
+        VGG adv         & $+1.46$ & $+0.89$ & $+0.89$ \\
+        MBv2 clean      & $+3.37$ & $+3.37$ & $+3.37$ \\
+        MBv2 adv        & $-0.06$ & $+0.28$ & $+0.28$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{delta_sensitivity}
+    \caption{Sensitivity of the VT-neutral gain to the tolerance $\delta$.}
+    \label{fig:delta}
+\end{figure}
+
+The sign of the gain is stable: 25 of the 27 entries are positive, and the two negative entries ($-0.35$ and $-0.06$) are on the two configurations whose gains were already within noise. The magnitude is not stable: because the threshold grid is discrete and the fixed horizon is an integer, changing $\delta$ can move the selected threshold by one grid step and the matched horizon by one timestep, which can change the gain by one to three points (from $+1.15$ to $+2.73$ on R18 clean and from $+3.12$ to $+6.49$ on VGG clean). The qualitative conclusions of \secref{sec:res-efficiency} hold for every $\delta$: clear gains on clean fixed-T8 ResNet-18 and VGG16, smaller gains under adversarial training and negligible gains under mixed-T training. However, but single-point gain values should be read with roughly $\pm 1.5$ points of selection uncertainty in addition to evaluation noise.
+
+\input{chapters/04b_results}
